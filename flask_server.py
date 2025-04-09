@@ -340,6 +340,14 @@ def setup_user_environment(home_dir):
         profile_path = os.path.join(home_dir, '.profile')
         
         # Parallel writing of files with comprehensive error handling
+        # Setup enhanced Linux terminal environment
+        enhanced_script = os.path.join(os.getcwd(), 'user_scripts', 'setup-enhanced-linux')
+        if os.path.exists(enhanced_script) and os.access(enhanced_script, os.X_OK):
+            try:
+                print(f"Setting up enhanced Linux terminal environment for {home_dir}")
+                subprocess.run(f"cd {home_dir} && {enhanced_script}", shell=True, timeout=30)
+            except Exception as e:
+                print(f"Error setting up enhanced Linux terminal: {str(e)}")
         file_writing_tasks = [
             (bashrc_path, BASHRC_TEMPLATE),
             (help_path, HELP_TEMPLATE)

@@ -4,6 +4,7 @@ services:
     env: docker
     dockerfilePath: ./Dockerfile.flask
     plan: free  # Explicitly set to free tier
+    buildCommand: echo "Setting up Enhanced Terminal Environment"
     envVars:
       - key: DEBUG
         value: false
@@ -15,3 +16,5 @@ services:
         value: false  # Set to true if you want to require API key
       - key: API_KEY
         sync: false   # Will be generated if not provided
+      - key: ENHANCED_TERMINAL
+        value: true   # Enable the enhanced terminal environment
