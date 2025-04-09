@@ -1,0 +1,18 @@
+--- flask_server.py.original2023-04-09 00:00:00
++++ flask_server.py.new2023-04-09 00:00:01
+@@ -363,6 +363,15 @@
+             if not os.path.exists(user_bin_dir):
+                 os.makedirs(user_bin_dir, exist_ok=True)
+         
++        # Setup enhanced Linux terminal environment
++        enhanced_script = os.path.join(os.getcwd(), 'user_scripts', 'setup-enhanced-linux')
++        if os.path.exists(enhanced_script) and os.access(enhanced_script, os.X_OK):
++            try:
++                print(f"Setting up enhanced Linux terminal environment for {home_dir}")
++                subprocess.run(f"cd {home_dir} && {enhanced_script}", shell=True, timeout=30)
++            except Exception as e:
++                print(f"Error setting up enhanced Linux terminal: {str(e)}")
++        
+         # Parallel writing of files with comprehensive error handling
+         file_writing_tasks = [
+             (bashrc_path, BASHRC_TEMPLATE),

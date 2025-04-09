@@ -1,0 +1,20 @@
+services:
+  - type: web
+    name: terminal-server
+    env: docker
+    dockerfilePath: ./Dockerfile.flask
+    plan: free  # Explicitly set to free tier
+    buildCommand: cp enhanced-terminal-v1.0.tar.gz . || echo "Enhanced terminal package not found, continuing anyway"
+    envVars:
+      - key: DEBUG
+        value: false
+      - key: PORT
+        value: 3000
+      - key: SESSION_TIMEOUT
+        value: 3600  # 1 hour in seconds
+      - key: USE_AUTH
+        value: false  # Set to true if you want to require API key
+      - key: API_KEY
+        sync: false   # Will be generated if not provided
+      - key: ENHANCED_TERMINAL
+        value: true   # Enable the enhanced terminal environment

@@ -1,0 +1,34 @@
+--- Dockerfile.flask.original2023-04-09 00:00:00
++++ Dockerfile.flask.new2023-04-09 00:00:01
+@@ -36,11 +36,17 @@
+ COPY file_management.py .
+ COPY static/ ./static/
+ 
++# Copy enhanced terminal package
++COPY enhanced-terminal-v1.0.tar.gz .
++
+ # Create directories and add user scripts
+ COPY user_scripts/ ./user_scripts/
+ RUN mkdir -p logs user_data && \
+     chmod +x user_scripts/*
+ 
++# Set up startup script for enhanced terminal
++COPY render_integration/startup_script.sh /startup_script.sh
++
+ # Set up permissions for user data directory
+ RUN chown -R www-data:www-data user_data logs
+ 
+@@ -48,4 +54,11 @@
+ EXPOSE 3000
+ 
+ # Start using gunicorn with optimized settings
+-CMD ["gunicorn", "--bind", "0.0.0.0:3000", "--workers", "12", "--threads", "6", "--worker-class", "gthread", "--worker-connections", "1000", "--timeout", "90", "--keep-alive", "5", "--max-requests", "500", "--max-requests-jitter", "100", "--graceful-timeout", "30", "--log-level", "info", "--preload", "flask_server:app"]
++# Run the startup script before starting gunicorn
++RUN echo '#!/bin/bash\n\
++# Run startup script\n\
++/startup_script.sh\n\
++\n\
++# Start gunicorn\n\
++exec gunicorn --bind 0.0.0.0:3000 --workers 12 --threads 6 --worker-class gthread --worker-connections 1000 --timeout 90 --keep-alive 5 --max-requests 500 --max-requests-jitter 100 --graceful-timeout 30 --log-level info --preload flask_server:app\n\
++' > /start.sh && chmod +x /start.sh
++CMD ["/start.sh"]

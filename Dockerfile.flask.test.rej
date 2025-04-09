@@ -1,0 +1,15 @@
+--- Dockerfile.flask.original2023-04-09 00:00:00
++++ Dockerfile.flask.new2023-04-09 00:00:01
+@@ -54,4 +60,11 @@
+ EXPOSE 3000
+ 
+ # Start using gunicorn with optimized settings
+-CMD ["gunicorn", "--bind", "0.0.0.0:3000", "--workers", "12", "--threads", "6", "--worker-class", "gthread", "--worker-connections", "1000", "--timeout", "90", "--keep-alive", "5", "--max-requests", "500", "--max-requests-jitter", "100", "--graceful-timeout", "30", "--log-level", "info", "--preload", "flask_server:app"]
++# Run the startup script before starting gunicorn
++RUN echo '#!/bin/bash\n\
++# Run startup script\n\
++/startup_script.sh\n\
++\n\
++# Start gunicorn\n\
++exec gunicorn --bind 0.0.0.0:3000 --workers 12 --threads 6 --worker-class gthread --worker-connections 1000 --timeout 90 --keep-alive 5 --max-requests 500 --max-requests-jitter 100 --graceful-timeout 30 --log-level info --preload flask_server:app\n\
++' > /start.sh && chmod +x /start.sh
