@@ -1,0 +1,150 @@
+#!/bin/bash
+# Setup network tools for enhanced terminal environment
+
+# Source shell functions if available
+if [[ -f "$HOME/.local/lib/shell_functions.sh" ]]; then
+  source "$HOME/.local/lib/shell_functions.sh"
+else
+  # Define colors if shell_functions.sh is not available
+  RED='\033[0;31m'
+  GREEN='\033[0;32m'
+  YELLOW='\033[1;33m'
+  BLUE='\033[0;34m'
+  NC='\033[0m' # No Color
+fi
+
+echo -e "${BLUE}Setting up network tools...${NC}"
+
+# Create network tools directory
+mkdir -p "$HOME/.local/bin"
+
+# Function to link network tools
+link_network_tool() {
+  local src="$1"
+  local dest="$HOME/.local/bin/$(basename $src)"
+  
+  if [[ -f "$src" ]] && [[ -x "$src" ]]; then
+    ln -sf "$src" "$dest"
+    echo -e "  ${GREEN}Linked:${NC} $(basename $src)"
+  else
+    echo -e "  ${RED}Error:${NC} $src not found or not executable"
+  fi
+}
+
+# Check for network wrappers directory
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+NETWORK_WRAPPERS_DIR="$SCRIPT_DIR/../wrappers/networking"
+
+if [[ -d "$NETWORK_WRAPPERS_DIR" ]]; then
+  echo -e "${YELLOW}Linking network command wrappers...${NC}"
+  
+  # Link all network wrappers
+  for tool in "$NETWORK_WRAPPERS_DIR"/*; do
+    link_network_tool "$tool"
+  done
+else
+  echo -e "${RED}Network wrappers directory not found.${NC}"
+  
+  # Check alternative locations
+  alt_dirs=(
+    "$HOME/.enhanced/bin/networking"
+    "$HOME/.local/wrappers/networking"
+  )
+  
+  for dir in "${alt_dirs[@]}"; do
+    if [[ -d "$dir" ]]; then
+      echo -e "${YELLOW}Found network wrappers in $dir${NC}"
+      for tool in "$dir"/*; do
+        link_network_tool "$tool"
+      done
+      break
+    fi
+  done
+fi
+
+# Create a simple status checker to test network tools
+cat > "$HOME/.local/bin/network-status" << 'NETSTAT'
+#!/bin/bash
+# Script to check network status
+
+# Define colors
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+RED='\033[0;31m'
+BLUE='\033[0;34m'
+NC='\033[0m' # No Color
+
+echo -e "${BLUE}Checking network status...${NC}"
+
+# Check interfaces
+echo -e "${YELLOW}Network interfaces:${NC}"
+if command -v ifconfig >/dev/null 2>&1; then
+  ifconfig | grep -E "
+^
+[a-z]|inet " | sed 's/
+^
+/  /'
+elif command -v ip >/dev/null 2>&1; then
+  ip -br addr | sed 's/
+^
+/  /'
+else
+  echo "  No network tools found to list interfaces"
+fi
+
+# Check connectivity
+echo -e "\n${YELLOW}Network connectivity:${NC}"
+echo -n "  Internet connection: "
+if ping -c 1 -W 2 8.8.8.8 >/dev/null 2>&1; then
+  echo -e "${GREEN}Connected${NC}"
+else
+  echo -e "${RED}Not connected${NC}"
+fi
+
+# Show public IP
+echo -n "  Public IP address: "
+public_ip=$(curl -s https://api.ipify.org 2>/dev/null || wget -qO- https://api.ipify.org 2>/dev/null)
+if [ -n "$public_ip" ]; then
+  echo "$public_ip"
+else
+  echo -e "${RED}Not available${NC}"
+fi
+
+# Show DNS resolver
+echo -e "\n${YELLOW}DNS configuration:${NC}"
+if [ -f /etc/resolv.conf ]; then
+  nameservers=$(grep "
+^
+nameserver" /etc/resolv.conf | cut -d' ' -f2 | sed 's/
+^
+/  /')
+  if [ -n "$nameservers" ]; then
+    echo "  DNS servers:"
+    echo "$nameservers"
+  else
+    echo "  No DNS servers found"
+  fi
+else
+  echo "  DNS configuration not available"
+fi
+
+# Check firewall status
+echo -e "\n${YELLOW}Firewall status:${NC}"
+if command -v iptables >/dev/null 2>&1; then
+  if iptables -L -n >/dev/null 2>&1; then
+    echo "  Firewall is available (use 'sudo iptables -L' for details)"
+  else
+    echo "  Firewall not accessible (might need root privileges)"
+  fi
+else
+  echo "  Firewall tool not available"
+fi
+
+echo -e "\n${GREEN}Network check complete.${NC}"
+NETSTAT
+
+chmod +x "$HOME/.local/bin/network-status"
+echo -e "${GREEN}Created network-status utility.${NC}"
+echo -e "${YELLOW}To check your network status, run:${NC} network-status"
+
+echo -e "\n${GREEN}Network tools setup complete!${NC}"

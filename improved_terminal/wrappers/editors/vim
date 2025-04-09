@@ -1,0 +1,108 @@
+#!/bin/bash
+# Enhanced vim wrapper for terminal environment
+
+# Source shell functions if available
+if [[ -f "$HOME/.local/lib/shell_functions.sh" ]]; then
+  source "$HOME/.local/lib/shell_functions.sh"
+fi
+
+# Check if system vim exists
+if command -v vim >/dev/null 2>&1; then
+  # Create a .vimrc if it doesn't exist
+  VIMRC="$HOME/.vimrc"
+  if [[ ! -f "$VIMRC" ]]; then
+    # Create a basic config if it doesn't exist
+    cat > "$VIMRC" << 'VIMCONF'
+" Enhanced vim configuration
+syntax on
+set number
+set autoindent
+set expandtab
+set tabstop=4
+set shiftwidth=4
+set softtabstop=4
+set ignorecase
+set smartcase
+set incsearch
+set hlsearch
+set backspace=indent,eol,start
+set background=dark
+set ruler
+set showcmd
+set showmode
+set wildmenu
+set mouse=a
+filetype plugin indent on
+VIMCONF
+  fi
+  
+  # Pass all arguments to real vim
+  $(which vim) "$@"
+  exit $?
+fi
+
+# If no vim, try vi
+if command -v vi >/dev/null 2>&1; then
+  echo "Vim not found, using vi instead."
+  $(which vi) "$@"
+  exit $?
+fi
+
+# If no vi, try nano
+if command -v nano >/dev/null 2>&1; then
+  echo "Vim not found, using nano instead."
+  $(which nano) "$@"
+  exit $?
+fi
+
+# Last resort - use a very basic text editor simulation (same as nano wrapper)
+function basic_editor() {
+  local file="$1"
+  local content=""
+  
+  if [[ -f "$file" ]]; then
+    content=$(cat "$file")
+    echo "File: $file"
+    echo "Content:"
+    echo "------------------------------"
+    echo "$content"
+    echo "------------------------------"
+  else
+    echo "Creating new file: $file"
+  fi
+  
+  echo "This is a simulated text editor."
+  echo "In a real Linux environment, you would have a full text editor."
+  echo "Would you like to: "
+  echo "1. Save a simple text to this file"
+  echo "2. Append text to this file"
+  echo "3. Exit without changes"
+  read -p "Enter choice (1-3): " choice
+  
+  case "$choice" in
+    1)
+      echo "Enter text (Ctrl+D to finish):"
+      content=$(cat)
+      echo "$content" > "$file"
+      echo "File saved."
+      ;;
+    2)
+      echo "Enter text to append (Ctrl+D to finish):"
+      new_content=$(cat)
+      echo "$new_content" >> "$file"
+      echo "Text appended to file."
+      ;;
+    3)
+      echo "Exiting without changes."
+      ;;
+    *)
+      echo "Invalid choice. Exiting without changes."
+      ;;
+  esac
+  
+  return 0
+}
+
+# Use the basic editor
+basic_editor "$1"
+exit $?

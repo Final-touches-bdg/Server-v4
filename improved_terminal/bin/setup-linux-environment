@@ -1,0 +1,196 @@
+#!/bin/bash
+# Script to set up a Linux-like environment in the terminal
+
+# Source shell functions if available
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+if [[ -f "$SCRIPT_DIR/../lib/shell_functions.sh" ]]; then
+  source "$SCRIPT_DIR/../lib/shell_functions.sh"
+else
+  # Define colors if shell_functions.sh is not available
+  RED='\033[0;31m'
+  GREEN='\033[0;32m'
+  YELLOW='\033[1;33m'
+  BLUE='\033[0;34m'
+  NC='\033[0m' # No Color
+fi
+
+echo -e "${BLUE}Setting up Linux-like environment...${NC}"
+
+# Set up POSIX-like directory structure
+echo -e "${YELLOW}Creating Linux directory structure...${NC}"
+mkdir -p "$HOME/bin"
+mkdir -p "$HOME/.local/bin"
+mkdir -p "$HOME/.local/share"
+mkdir -p "$HOME/.local/lib"
+mkdir -p "$HOME/.config"
+mkdir -p "$HOME/tmp"
+mkdir -p "$HOME/etc"
+mkdir -p "$HOME/var/log"
+mkdir -p "$HOME/mnt"
+mkdir -p "$HOME/dev"
+mkdir -p "$HOME/proc"
+mkdir -p "$HOME/sys"
+
+# Create basic Linux files
+echo -e "${YELLOW}Creating Linux-like configuration files...${NC}"
+cat > "$HOME/etc/passwd" << 'PASSWD'
+root:x:0:0:root:/root:/bin/bash
+user:x:1000:1000:Terminal User:$HOME:/bin/bash
+PASSWD
+sed -i "s|\$HOME|$HOME|g" "$HOME/etc/passwd"
+
+cat > "$HOME/etc/group" << 'GROUP'
+root:x:0:
+user:x:1000:
+GROUP
+
+cat > "$HOME/etc/hosts" << 'HOSTS'
+127.0.0.1   localhost
+::1         localhost ip6-localhost ip6-loopback
+HOSTS
+
+cat > "$HOME/etc/resolv.conf" << 'RESOLV'
+nameserver 8.8.8.8
+nameserver 8.8.4.4
+RESOLV
+
+# Create a proc directory with simulated system information
+echo -e "${YELLOW}Creating simulated /proc filesystem...${NC}"
+echo "Linux version 5.15.0-terminal (terminal@user) (gcc version 11.2.0) #1 SMP $(date +"%a %b %d %H:%M:%S %Z %Y")" > "$HOME/proc/version"
+mkdir -p "$HOME/proc/sys/kernel"
+echo "terminal" > "$HOME/proc/sys/kernel/hostname"
+echo "Linux" > "$HOME/proc/sys/kernel/ostype"
+echo "5.15.0" > "$HOME/proc/sys/kernel/osrelease"
+
+# Create a dev directory with some device nodes
+mkdir -p "$HOME/dev/pts"
+touch "$HOME/dev/null"
+touch "$HOME/dev/zero"
+touch "$HOME/dev/random"
+touch "$HOME/dev/urandom"
+touch "$HOME/dev/stdin"
+touch "$HOME/dev/stdout"
+touch "$HOME/dev/stderr"
+
+# Create a custom motd (Message of the Day)
+cat > "$HOME/etc/motd" << 'MOTD'
+     _________# Let's create the improved help system
+mkdir -p improved_terminal/lib/help
+
+# Create a help index
+cat > improved_terminal/lib/help/index.txt << 'EOF'
+# Improved Terminal Help Index
+# Format: command|category|description
+
+# Basics
+help|basics|Display help information about commands
+man|basics|Display manual pages
+ls|basics|List directory contents
+cd|basics|Change the current directory
+pwd|basics|Print working directory
+mkdir|basics|Create directories
+rmdir|basics|Remove empty directories
+touch|basics|Change file timestamps or create empty files
+rm|basics|Remove files or directories
+cp|basics|Copy files and directories
+mv|basics|Move (rename) files
+cat|basics|Concatenate files and print on the standard output
+less|basics|View file contents with pagination
+more|basics|View file contents with pagination
+head|basics|Output the first part of files
+tail|basics|Output the last part of files
+chmod|basics|Change file mode bits
+chown|basics|Change file owner and group
+find|basics|Search for files in a directory hierarchy
+grep|basics|Print lines that match patterns
+history|basics|Command history manipulation
+which|basics|Locate a command
+whereis|basics|Locate the binary, source, and manual page files for a command
+echo|basics|Display a line of text
+date|basics|Print or set the system date and time
+clear|basics|Clear the terminal screen
+exit|basics|Exit the shell
+
+# System Information
+uname|system|Print system information
+free|system|Display amount of free and used memory
+df|system|Report file system disk space usage
+du|system|Estimate file space usage
+top|system|Display and update sorted information about processes
+ps|system|Report a snapshot of the current processes
+system-info|system|Display comprehensive system information
+uptime|system|Tell how long the system has been running
+w|system|Show who is logged on and what they are doing
+who|system|Show who is logged on
+whoami|system|Print effective userid
+id|system|Print real and effective user and group IDs
+hostname|system|Show or set the system's host name
+
+# Network
+ping|network|Send ICMP ECHO_REQUEST to network hosts
+ifconfig|network|Configure a network interface
+ip|network|Show / manipulate routing, devices, policy routing and tunnels
+dig|network|DNS lookup utility
+nslookup|network|Query Internet name servers interactively
+netstat|network|Print network connections, routing tables, etc.
+traceroute|network|Print the route packets trace to network host
+curl|network|Transfer a URL
+wget|network|The non-interactive network downloader
+ssh|network|OpenSSH SSH client (remote login program)
+scp|network|Secure copy (remote file copy program)
+rsync|network|A fast, versatile file copying tool
+whois|network|Client for the whois directory service
+network-status|network|Display network status information
+
+# Package Management
+apt|package|Advanced Package Tool
+apt-get|package|APT package handling utility
+pkg|package|Package management tool
+pkg install|package|Install packages
+pkg remove|package|Remove packages
+pkg search|package|Search for packages
+pkg list-installed|package|List installed packages
+pkg update|package|Update package lists
+pkg upgrade|package|Upgrade packages
+
+# Text Editors
+nano|editors|Nano's ANOther editor, an enhanced free Pico clone
+vim|editors|Vi IMproved, a programmer's text editor
+vi|editors|The traditional Unix visual editor
+emacs|editors|GNU Emacs text editor
+
+# File Compression & Archiving
+tar|archive|The GNU version of the tar archiving utility
+gzip|archive|Compress or expand files
+gunzip|archive|Expand files
+bzip2|archive|A block-sorting file compressor
+bunzip2|archive|Decompresses files
+zip|archive|Package and compress (archive) files
+unzip|archive|List, test and extract compressed files in a ZIP archive
+
+# Shell Utilities
+bash|shell|GNU Bourne-Again SHell
+alias|shell|Define or display aliases
+export|shell|Set export attribute for shell variables
+source|shell|Execute commands from a file in the current shell
+set|shell|Set or unset values of shell options and positional parameters
+unset|shell|Unset values and attributes of shell variables and functions
+read|shell|Read a line from standard input and split it into fields
+exec|shell|Execute commands
+
+# Terminal Tools
+available-commands|tools|List all available commands
+which-wrapper|tools|Enhanced which command that shows wrapper locations
+session-keep-alive|tools|Keep session alive by running light commands periodically
+monitor-memory|tools|Monitor and manage memory usage
+
+# Development
+git|dev|The stupid content tracker
+gcc|dev|GNU project C and C++ compiler
+g++|dev|GNU project C++ compiler
+make|dev|GNU make utility to maintain groups of programs
+python|dev|An interpreted, interactive, object-oriented programming language
+python3|dev|Python 3 language interpreter
+pip|dev|Package installer for Python
+nodejs|dev|JavaScript runtime environment
+npm|dev|Node package manager

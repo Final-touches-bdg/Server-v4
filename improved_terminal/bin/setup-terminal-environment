@@ -1,0 +1,174 @@
+#!/bin/bash
+# Script to set up an enhanced terminal environment
+
+# Source shell functions if available
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+if [[ -f "$SCRIPT_DIR/../lib/shell_functions.sh" ]]; then
+  source "$SCRIPT_DIR/../lib/shell_functions.sh"
+else
+  # Define colors if shell_functions.sh is not available
+  RED='\033[0;31m'
+  GREEN='\033[0;32m'
+  YELLOW='\033[1;33m'
+  BLUE='\033[0;34m'
+  NC='\033[0m' # No Color
+fi
+
+echo -e "${BLUE}Setting up enhanced terminal environment...${NC}"
+
+# Create necessary directories
+echo -e "${YELLOW}Creating directory structure...${NC}"
+mkdir -p "$HOME/.local/bin"
+mkdir -p "$HOME/.local/lib"
+mkdir -p "$HOME/.local/etc"
+mkdir -p "$HOME/.local/share"
+mkdir -p "$HOME/.local/custom_tools"
+mkdir -p "$HOME/.enhanced/bin"
+mkdir -p "$HOME/.enhanced/lib"
+mkdir -p "$HOME/.enhanced/etc"
+mkdir -p "$HOME/bin"
+mkdir -p "$HOME/projects"
+mkdir -p "$HOME/downloads"
+mkdir -p "$HOME/.ssh"
+mkdir -p "$HOME/.config"
+
+# Copy files from script directory
+PARENT_DIR="$(dirname "$SCRIPT_DIR")"
+if [[ -d "$PARENT_DIR" ]]; then
+  echo -e "${YELLOW}Copying enhanced environment files...${NC}"
+  
+  # Copy libraries
+  if [[ -d "$PARENT_DIR/lib" ]]; then
+    cp -r "$PARENT_DIR/lib/"* "$HOME/.local/lib/" 2>/dev/null
+    chmod +x "$HOME/.local/lib/"*.sh 2>/dev/null
+  fi
+  
+  # Copy configuration files
+  if [[ -d "$PARENT_DIR/etc" ]]; then
+    cp -r "$PARENT_DIR/etc/"* "$HOME/.local/etc/" 2>/dev/null
+  fi
+  
+  # Copy binaries and scripts
+  if [[ -d "$PARENT_DIR/bin" ]]; then
+    cp -r "$PARENT_DIR/bin/"* "$HOME/.local/bin/" 2>/dev/null
+    chmod +x "$HOME/.local/bin/"* 2>/dev/null
+  fi
+  
+  # Copy wrappers
+  if [[ -d "$PARENT_DIR/wrappers" ]]; then
+    cp -r "$PARENT_DIR/wrappers/"* "$HOME/.enhanced/bin/" 2>/dev/null
+    chmod +x "$HOME/.enhanced/bin/"* 2>/dev/null
+  fi
+fi
+
+# Set up enhanced bashrc
+echo -e "${YELLOW}Setting up enhanced bash configuration...# Create networking command wrappers
+mkdir -p improved_terminal/wrappers/networking
+
+# Create ifconfig wrapper
+cat > improved_terminal/wrappers/networking/ifconfig << 'EOF'
+#!/bin/bash
+# Enhanced ifconfig wrapper for terminal environment
+
+# Source shell functions if available
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+if [[ -f "$HOME/.local/lib/shell_functions.sh" ]]; then
+  source "$HOME/.local/lib/shell_functions.sh"
+fi
+
+# Check if system ifconfig exists
+if command_exists ifconfig; then
+  # Pass all arguments to the real ifconfig
+  $(which ifconfig) "$@"
+  exit $?
+fi
+
+# If we don't have ifconfig, use 'ip' command as fallback
+if command_exists ip; then
+  # Simulate ifconfig using ip command
+  if [ $# -eq 0 ]; then
+    # No arguments, list all interfaces
+    ip -c addr show
+    exit $?
+  elif [ "$1" = "-a" ]; then
+    # List all interfaces including inactive ones
+    ip -c addr show
+    exit $?
+  elif [[ "$1" =~ 
+^
+[a-zA-Z0-9]+$ ]]; then
+    # Interface specified
+    ip -c addr show "$1"
+    exit $?
+  fi
+else
+  # Fallback to basic network information gathering using /proc
+  function show_interfaces() {
+    echo "Network interfaces:"
+    
+    # List all network interfaces from /proc
+    for iface in /sys/class/net/*; do
+      if [ -d "$iface" ]; then
+        iface_name=$(basename "$iface")
+        echo -e "\n$iface_name:"
+        
+        # Show MAC address
+        if [ -f "$iface/address" ]; then
+          echo "  HWaddr $(cat $iface/address)"
+        fi
+        
+        # Show interface status
+        if [ -f "$iface/operstate" ]; then
+          state=$(cat $iface/operstate)
+          if [ "$state" = "up" ]; then
+            state_color="${GREEN}UP${NC}"
+          else
+            state_color="${RED}DOWN${NC}"
+          fi
+          echo -e "  Status: $state_color"
+        fi
+        
+        # Try to get IP address
+        if [ -d "/sys/class/net/$iface_name" ]; then
+          ip_info=$(ip -4 addr show "$iface_name" 2>/dev/null)
+          if [ $? -eq 0 ]; then
+            ip_addr=$(echo "$ip_info" | grep -oP 'inet \K[\d.]+')
+            if [ -n "$ip_addr" ]; then
+              echo "  inet addr: $ip_addr"
+            fi
+          fi
+        fi
+      fi
+    done
+  }
+  
+  if [ $# -eq 0 ] || [ "$1" = "-a" ]; then
+    show_interfaces
+  elif [[ "$1" =~ 
+^
+[a-zA-Z0-9]+$ ]]; then
+    for iface in /sys/class/net/*; do
+      if [ "$(basename "$iface")" = "$1" ]; then
+        echo "$1:"
+        # Show interface information
+        if [ -f "$iface/address" ]; then
+          echo "  HWaddr $(cat $iface/address)"
+        fi
+        # Try to get IP address
+        ip_info=$(ip -4 addr show "$1" 2>/dev/null)
+        if [ $? -eq 0 ]; then
+          ip_addr=$(echo "$ip_info" | grep -oP 'inet \K[\d.]+')
+          if [ -n "$ip_addr" ]; then
+            echo "  inet addr: $ip_addr"
+          fi
+        fi
+        exit 0
+      fi
+    done
+    echo "Interface $1 not found"
+    exit 1
+  else
+    echo "Usage: ifconfig [interface]"
+    exit 1
+  fi
+fi

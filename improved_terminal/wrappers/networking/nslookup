@@ -1,0 +1,48 @@
+#!/bin/bash
+# Enhanced nslookup wrapper for terminal environment
+
+# Source shell functions if available
+if [[ -f "$HOME/.local/lib/shell_functions.sh" ]]; then
+  source "$HOME/.local/lib/shell_functions.sh"
+fi
+
+# Check if system nslookup exists
+if command -v nslookup >/dev/null 2>&1; then
+  # Pass all arguments to the real nslookup
+  $(which nslookup) "$@"
+  exit $?
+fi
+
+# If no nslookup, check for host command
+if command -v host >/dev/null 2>&1; then
+  # Use host command instead
+  echo "Using host command instead of nslookup:"
+  $(which host) "$@"
+  exit $?
+fi
+
+# If no host, try dig
+if command -v dig >/dev/null 2>&1; then
+  # Use dig command
+  echo "Using dig command instead of nslookup:"
+  $(which dig) +short "$@"
+  exit $?
+fi
+
+# Last resort - try resolving with getent hosts
+if command -v getent >/dev/null 2>&1; then
+  echo "Server: Simulated DNS lookup"
+  echo "Address: 127.0.0.1"
+  echo ""
+  echo "Non-authoritative answer:"
+  getent hosts "$1"
+  exit $?
+fi
+
+# If we don't have any DNS tools, create a simple simulation
+echo "Server: Simulated DNS lookup"
+echo "Address: 127.0.0.1"
+echo ""
+echo "This is a simulated nslookup command."
+echo "In a real Linux environment, you would see DNS resolution information."
+exit 0

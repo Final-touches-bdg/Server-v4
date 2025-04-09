@@ -1,0 +1,312 @@
+#!/bin/bash
+# Script to integrate the enhanced terminal environment with flask_server.py
+
+# Define colors
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+BLUE='\033[0;34m'
+NC='\033[0m' # No Color
+
+echo -e "${BLUE}Integrating enhanced terminal environment with flask_server.py...${NC}"
+
+# Find flask_server.py in parent directories
+if [ -f "../flask_server.py" ]; then
+  FLASK_SERVER="../flask_server.py"
+elif [ -f "../../flask_server.py" ]; then
+  FLASK_SERVER="../../flask_server.py"
+else
+  echo -e "${RED}Error: Could not find flask_server.py${NC}"
+  echo "Please run this script from within the project directory."
+  exit 1
+fi
+
+echo -e "${YELLOW}Found flask_server.py at: ${FLASK_SERVER}${NC}"
+
+# Create backup of flask_server.py
+cp "$FLASK_SERVER" "${FLASK_SERVER}.bak"
+echo -e "Created backup at ${FLASK_SERVER}.bak"
+
+# Find user_scripts directory in parent directories
+if [ -d "../user_scripts" ]; then
+  USER_SCRIPTS_DIR="../user_scripts"
+elif [ -d "../../user_scripts" ]; then
+  USER_SCRIPTS_DIR="../../user_scripts" 
+else
+  echo -e "${RED}Error: Could not find user_scripts directory${NC}"
+  echo "Please run this script from within the project directory."
+  exit 1
+fi
+
+echo -e "${YELLOW}Found user_scripts directory at: ${USER_SCRIPTS_DIR}${NC}"
+
+# Copy our enhanced environment files to user_scripts
+echo -e "${YELLOW}Installing enhanced environment files to user_scripts...${NC}"
+
+# Copy all command wrappers
+mkdir -p "$USER_SCRIPTS_DIR/enhanced"
+cp -r improved_terminal/wrappers/* "$USER_SCRIPTS_DIR/enhanced/"
+
+# Copy lib files
+mkdir -p "$USER_SCRIPTS_DIR/enhanced/lib"
+cp -r improved_terminal/lib/* "$USER_SCRIPTS_DIR/enhanced/lib/"
+
+# Copy etc files
+mkdir -p "$USER_SCRIPTS_DIR/enhanced/etc"
+cp -r improved_terminal/etc/* "$USER_SCRIPTS_DIR/enhanced/etc/"
+
+# Copy bin files
+mkdir -p "$USER_SCRIPTS_DIR/enhanced/bin"
+cp -r improved_terminal/bin/* "$USER_SCRIPTS_DIR/enhanced/bin/"
+
+# Create a master environment setup script
+cat > "$USER_SCRIPTS_DIR/setup-enhanced-linux-terminal" << 'SETUP'
+#!/bin/bash
+# Master script to set up the enhanced Linux terminal environment
+
+# Get script directory
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+# Define colors
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+BLUE='\033[0;34m'
+NC='\033[0m' # No Color
+
+echo -e "${BLUE}Setting up Enhanced Linux Terminal Environment...${NC}"
+
+# Source directories
+ENHANCED_DIR="${SCRIPT_DIR}/enhanced"
+LIB_DIR="${ENHANCED_DIR}/lib"
+BIN_DIR="${ENHANCED_DIR}/bin"
+ETC_DIR="${ENHANCED_DIR}/etc"
+WRAPPERS_DIR="${ENHANCED_DIR}"
+
+# Create necessary directories
+echo -e "${YELLOW}Creating directory structure...${NC}"
+mkdir -p "$HOME/.local/bin"
+mkdir -p "$HOME/.local/lib"
+mkdir -p "$HOME/.local/etc"
+mkdir -p "$HOME/.enhanced/bin"
+mkdir -p "$HOME/bin"
+mkdir -p "$HOME/.config"
+
+# Copy library files
+echo -e "${YELLOW}Installing library files...${NC}"
+if [ -d "$LIB_DIR" ]; then
+  cp -r "$LIB_DIR"/* "$HOME/.local/lib/" 2>/dev/null
+  chmod +x "$HOME/.local/lib/"*.sh 2>/dev/null
+  echo -e "${GREEN}Installed library files${NC}"
+else
+  echo -e "${RED}Warning: Library directory not found at $LIB_DIR${NC}"
+fi
+
+# Copy configuration files
+echo -e "${YELLOW}Installing configuration files...${NC}"
+if [ -d "$ETC_DIR" ]; then
+  cp -r "$ETC_DIR"/* "$HOME/.local/etc/" 2>/dev/null
+  echo -e "${GREEN}Installed configuration files${NC}"
+else
+  echo -e "${RED}Warning: Configuration directory not found at $ETC_DIR${NC}"
+fi
+
+# Create .bash_profile to load our enhanced environment
+cat > "$HOME/.bash_profile" << 'PROFILE'
+# Enhanced Terminal Environment
+
+# Source .bashrc if it exists
+if [ -f "$HOME/.bashrc" ]; then
+  . "$HOME/.bashrc"
+fi
+
+# Run system info if available
+if [ -f "$HOME/.local/bin/system-info" ]; then
+  "$HOME/.local/bin/system-info"
+fi
+
+# Display help message
+echo ""
+echo "Type 'help' for command assistance"
+echo "Type 'available-commands' to see all available commands"
+PROFILE
+
+# Create .profile to source bash_profile
+cat > "$HOME/.profile" << 'PROFILE2'
+# Source bash_profile if it exists
+if [ -f "$HOME/.bash_profile" ]; then
+  . "$HOME/.bash_profile"
+fi
+PROFILE2
+
+# Set up enhanced bashrc
+if [ -f "$HOME/.local/etc/enhanced_bashrc" ]; then
+  cp "$HOME/.local/etc/enhanced_bashrc" "$HOME/.bashrc"
+  echo -e "${GREEN}Installed enhanced bashrc${NC}"
+else
+  echo -e "${RED}Warning: Enhanced bashrc not found${NC}"
+fi
+
+# Check for bin files and install them
+echo -e "${YELLOW}Installing bin scripts...${NC}"
+if [ -d "$BIN_DIR" ]; then
+  # Full setup script
+  if [ -f "$BIN_DIR/setup-full-environment" ]; then
+    cp "$BIN_DIR/setup-full-environment" "$HOME/.local/bin/setup-full-environment"
+    chmod +x "$HOME/.local/bin/setup-full-environment"
+  fi
+  
+  # Network setup
+  if [ -f "$BIN_DIR/setup-network-tools" ]; then
+    cp "$BIN_DIR/setup-network-tools" "$HOME/.local/bin/setup-network-tools"
+    chmod +x "$HOME/.local/bin/setup-network-tools"
+  fi
+  
+  # Command wrappers setup
+  if [ -f "$BIN_DIR/setup-command-wrappers" ]; then
+    cp "$BIN_DIR/setup-command-wrappers" "$HOME/.local/bin/setup-command-wrappers"
+    chmod +x "$HOME/.local/bin/setup-command-wrappers"
+  fi
+  
+  # Linux environment setup
+  if [ -f "$BIN_DIR/setup-linux-environment" ]; then
+    cp "$BIN_DIR/setup-linux-environment" "$HOME/.local/bin/setup-linux-environment"
+    chmod +x "$HOME/.local/bin/setup-linux-environment"
+  fi
+  
+  echo -e "${GREEN}Installed bin scripts${NC}"
+else
+  echo -e "${RED}Warning: Bin directory not found at $BIN_DIR${NC}"
+fi
+
+# Install command wrappers
+echo -e "${YELLOW}Installing command wrappers...${NC}"
+for category in networking package_management editors system; do
+  if [ -d "$WRAPPERS_DIR/$category" ]; then
+    echo -e "Installing $category wrappers..."
+    for cmd in "$WRAPPERS_DIR/$category"/*; do
+      if [ -f "$cmd" ]; then
+        cmd_name=$(basename "$cmd")
+        cp "$cmd" "$HOME/.local/bin/"
+        chmod +x "$HOME/.local/bin/$cmd_name"
+        echo -e "  ${GREEN}Installed:${NC} $cmd_name"
+      fi
+    done
+  fi
+done
+
+# Run the setup scripts to complete the process
+if [ -x "$HOME/.local/bin/setup-command-wrappers" ]; then
+  echo -e "\n${YELLOW}Setting up command wrappers...${NC}"
+  "$HOME/.local/bin/setup-command-wrappers"
+fi
+
+if [ -x "$HOME/.local/bin/setup-linux-environment" ]; then
+  echo -e "\n${YELLOW}Setting up Linux environment...${NC}"
+  "$HOME/.local/bin/setup-linux-environment"
+fi
+
+if [ -x "$HOME/.local/bin/setup-network-tools" ]; then
+  echo -e "\n${YELLOW}Setting up network tools...${NC}"
+  "$HOME/.local/bin/setup-network-tools"
+fi
+
+echo -e "\n${GREEN}Enhanced Linux Terminal Environment setup complete!${NC}"
+echo -e "${YELLOW}Type 'help' for assistance or 'available-commands' to see all commands.${NC}"
+SETUP
+
+chmod +x "$USER_SCRIPTS_DIR/setup-enhanced-linux-terminal"
+
+echo -e "${GREEN}Enhanced environment files installed to user_scripts${NC}"
+echo -e "${YELLOW}Integration complete. Users can now run 'setup-enhanced-linux-terminal' to set up the enhanced environment.${NC}"
+
+# Create a test script to verify the installation
+cat > "$USER_SCRIPTS_DIR/test-enhanced-environment" << 'TEST'
+#!/bin/bash
+# Test script to verify the enhanced environment installation
+
+# Define colors
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+BLUE='\033[0;34m'
+NC='\033[0m' # No Color
+
+echo -e "${BLUE}Testing Enhanced Linux Terminal Environment...${NC}"
+
+# Test commands
+echo -e "${YELLOW}Testing command availability:${NC}"
+
+# Function to check if a command exists
+check_command() {
+  local cmd="$1"
+  if command -v "$cmd" &>/dev/null; then
+    echo -e "  ${GREEN}✓${NC} $cmd is available"
+    return 0
+  else
+    if [ -f "$HOME/.local/bin/$cmd" ]; then
+      echo -e "  ${GREEN}✓${NC} $cmd is available (in ~/.local/bin)"
+      return 0
+    else
+      echo -e "  ${RED}✗${NC} $cmd is not available"
+      return 1
+    fi
+  fi
+}
+
+# Test basic commands
+echo -e "\n${YELLOW}Testing basic commands:${NC}"
+check_command "ls"
+check_command "cat"
+check_command "grep"
+check_command "find"
+
+# Test network commands
+echo -e "\n${YELLOW}Testing network commands:${NC}"
+check_command "ping"
+check_command "ifconfig"
+check_command "curl"
+check_command "wget"
+
+# Test editors
+echo -e "\n${YELLOW}Testing editors:${NC}"
+check_command "nano"
+check_command "vim"
+
+# Test help system
+echo -e "\n${YELLOW}Testing help system:${NC}"
+check_command "help"
+check_command "man"
+
+# Test package management
+echo -e "\n${YELLOW}Testing package management:${NC}"
+check_command "pkg"
+check_command "apt"
+
+# Test utilities
+echo -e "\n${YELLOW}Testing utilities:${NC}"
+check_command "system-info"
+check_command "available-commands"
+check_command "which-wrapper"
+
+# Test configurations
+echo -e "\n${YELLOW}Testing configurations:${NC}"
+if [ -f "$HOME/.bashrc" ]; then
+  echo -e "  ${GREEN}✓${NC} .bashrc exists"
+else
+  echo -e "  ${RED}✗${NC} .bashrc is missing"
+fi
+
+if [ -f "$HOME/.profile" ]; then
+  echo -e "  ${GREEN}✓${NC} .profile exists"
+else
+  echo -e "  ${RED}✗${NC} .profile is missing"
+fi
+
+echo -e "\n${GREEN}Testing complete!${NC}"
+TEST
+
+chmod +x "$USER_SCRIPTS_DIR/test-enhanced-environment"
+
+echo -e "${GREEN}Integration complete!${NC}"
+echo -e "${YELLOW}To use the enhanced environment, users should run: setup-enhanced-linux-terminal${NC}"

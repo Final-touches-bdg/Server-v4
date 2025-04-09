@@ -1,0 +1,103 @@
+#!/bin/bash
+# Enhanced pkg wrapper for terminal environment
+# Simulates a Termux-like package manager
+
+# Source shell functions if available
+if [[ -f "$HOME/.local/lib/shell_functions.sh" ]]; then
+  source "$HOME/.local/lib/shell_functions.sh"
+fi
+
+# Define colors
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+BLUE='\033[0;34m'
+NC='\033[0m' # No Color
+
+# Package database location (same as apt wrapper)
+PKG_DB="$HOME/.pkg/installed.txt"
+PKG_LIST="$HOME/.pkg/package_list.txt"
+PKG_LOG="$HOME/.pkg/history.log"
+
+# Ensure package directories exist
+mkdir -p "$(dirname "$PKG_DB")"
+mkdir -p "$HOME/.pkg/cache"
+
+# Forward to apt wrapper if it exists
+APT_WRAPPER="$HOME/.local/bin/apt"
+if [[ -x "$APT_WRAPPER" ]]; then
+  # Just convert pkg command to apt command format
+  case "$1" in
+    install)
+      "$APT_WRAPPER" install "${@:2}"
+      exit $?
+      ;;
+    remove|uninstall)
+      "$APT_WRAPPER" remove "${@:2}"
+      exit $?
+      ;;
+    search)
+      "$APT_WRAPPER" search "${@:2}"
+      exit $?
+      ;;
+    list-installed)
+      "$APT_WRAPPER" list installed
+      exit $?
+      ;;
+    update)
+      "$APT_WRAPPER" update
+      exit $?
+      ;;
+    upgrade)
+      "$APT_WRAPPER" upgrade
+      exit $?
+      ;;
+    help)
+      # Show pkg-specific help
+      ;;
+    *)
+      # Try to map to apt command
+      "$APT_WRAPPER" "$@"
+      exit $?
+      ;;
+  esac
+fi
+
+# Print pkg-specific help
+show_help() {
+  echo -e "${BLUE}pkg - Terminal Package Management Simulation${NC}"
+  echo ""
+  echo "Usage: pkg COMMAND [OPTIONS]"
+  echo ""
+  echo "Commands:"
+  echo "  install PACKAGE...   - Install packages"
+  echo "  remove PACKAGE...    - Remove packages (same as uninstall)"
+  echo "  uninstall PACKAGE... - Remove packages (same as remove)"
+  echo "  search TERM          - Search for packages"
+  echo "  list-installed       - List installed packages"
+  echo "  update               - Update package lists"
+  echo "  upgrade              - Upgrade packages"
+  echo "  help                 - Show this help"
+}
+
+# Show help if no command specified
+if [ $# -eq 0 ]; then
+  show_help
+  exit 1
+fi
+
+# Process pkg command (fallback if apt wrapper isn't used)
+case "$1" in
+  help)
+    show_help
+    ;;
+    
+  *)
+    echo -e "${RED}Command '$1' not found.${NC}"
+    echo "For security reasons, this command must be handled by the apt wrapper."
+    echo "Please ensure that it's properly installed at ~/.local/bin/apt"
+    exit 1
+    ;;
+esac
+
+exit 0

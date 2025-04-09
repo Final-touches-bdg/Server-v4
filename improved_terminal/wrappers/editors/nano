@@ -1,0 +1,94 @@
+#!/bin/bash
+# Enhanced nano wrapper for terminal environment
+
+# Source shell functions if available
+if [[ -f "$HOME/.local/lib/shell_functions.sh" ]]; then
+  source "$HOME/.local/lib/shell_functions.sh"
+fi
+
+# Check if system nano exists
+if command -v nano >/dev/null 2>&1; then
+  # Use real nano with some enhanced defaults if no nanorc exists
+  NANORC="$HOME/.nanorc"
+  if [[ ! -f "$NANORC" ]]; then
+    # Create a basic config if it doesn't exist
+    cat > "$NANORC" << 'NANOCONF'
+# Enhanced nano configuration
+set autoindent
+set constantshow
+set linenumbers
+set mouse
+set tabsize 4
+set tabstospaces
+set historylog
+set smooth
+set suspend
+set softwrap
+NANOCONF
+  fi
+  
+  # Pass all arguments to real nano
+  $(which nano) "$@"
+  exit $?
+fi
+
+# If no nano is available, try fallback editors
+for editor in vim vi emacs ed; do
+  if command -v $editor >/dev/null 2>&1; then
+    echo "Nano not found, using $editor instead."
+    $(which $editor) "$@"
+    exit $?
+  fi
+done
+
+# Last resort - use a very basic text editor simulation
+function basic_editor() {
+  local file="$1"
+  local content=""
+  
+  if [[ -f "$file" ]]; then
+    content=$(cat "$file")
+    echo "File: $file"
+    echo "Content:"
+    echo "------------------------------"
+    echo "$content"
+    echo "------------------------------"
+  else
+    echo "Creating new file: $file"
+  fi
+  
+  echo "This is a simulated text editor."
+  echo "In a real Linux environment, you would have a full text editor."
+  echo "Would you like to: "
+  echo "1. Save a simple text to this file"
+  echo "2. Append text to this file"
+  echo "3. Exit without changes"
+  read -p "Enter choice (1-3): " choice
+  
+  case "$choice" in
+    1)
+      echo "Enter text (Ctrl+D to finish):"
+      content=$(cat)
+      echo "$content" > "$file"
+      echo "File saved."
+      ;;
+    2)
+      echo "Enter text to append (Ctrl+D to finish):"
+      new_content=$(cat)
+      echo "$new_content" >> "$file"
+      echo "Text appended to file."
+      ;;
+    3)
+      echo "Exiting without changes."
+      ;;
+    *)
+      echo "Invalid choice. Exiting without changes."
+      ;;
+  esac
+  
+  return 0
+}
+
+# Use the basic editor
+basic_editor "$1"
+exit $?

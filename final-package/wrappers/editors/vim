@@ -1,0 +1,68 @@
+#!/bin/bash
+# Simple vim editor wrapper
+
+# Check if real vim exists
+if command -v /bin/vim &>/dev/null || command -v /usr/bin/vim &>/dev/null; then
+  # Create a vimrc file if it doesn't exist
+  if [ ! -f "$HOME/.vimrc" ]; then
+    cat > "$HOME/.vimrc" << 'VIMRC'
+" Enhanced vim configuration
+syntax on
+set number
+set autoindent
+set expandtab
+set tabstop=4
+set shiftwidth=4
+set softtabstop=4
+set background=dark
+set ruler
+set showcmd
+VIMRC
+  fi
+  
+  # Run the real vim
+  $(which vim) "$@"
+  exit $?
+fi
+
+# If vim is not available, try nano
+if command -v nano &>/dev/null; then
+  echo "Vim not found, using nano instead."
+  sleep 1
+  nano "$@"
+  exit $?
+fi
+
+# Last resort - minimal editor simulation
+echo "Simple Text Editor (vim simulation)"
+echo "=================================="
+
+if [ $# -eq 0 ]; then
+  echo "Error: No file specified."
+  echo "Usage: vim filename"
+  exit 1
+fi
+
+filename="$1"
+
+# Check if file exists
+if [ -f "$filename" ]; then
+  content=$(cat "$filename")
+  echo "Editing file: $filename"
+  echo "Current content:"
+  echo "----------------"
+  echo "$content"
+else
+  echo "Creating new file: $filename"
+  content=""
+fi
+
+echo "----------------"
+echo "Enter new content (Ctrl+D when finished):"
+new_content=$(cat)
+
+# Save the file
+echo "$new_content" > "$filename"
+echo "File saved: $filename"
+
+exit 0

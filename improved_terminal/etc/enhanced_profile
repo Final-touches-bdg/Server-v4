@@ -1,0 +1,40 @@
+#!/bin/bash
+# Enhanced .profile for terminal environment
+
+# Load shell functions if available
+if [ -f "$HOME/.local/lib/shell_functions.sh" ]; then
+  . "$HOME/.local/lib/shell_functions.sh"
+fi
+
+# Set path to include user's bin directories
+export PATH="$HOME/.local/bin:$HOME/bin:$HOME/.enhanced/bin:$PATH"
+
+# Set default language and locale settings
+export LANG=en_US.UTF-8
+export LC_ALL=en_US.UTF-8
+
+# Set default editor
+export EDITOR=nano
+export VISUAL=nano
+
+# Python settings
+export PYTHONUSERBASE="$HOME/.local"
+export PYTHONIOENCODING=utf-8
+export PYTHONUNBUFFERED=1
+
+# Node.js settings
+export NPM_CONFIG_PREFIX="$HOME/.local"
+
+# Load enhanced bashrc
+if [ -f "$HOME/.bashrc" ]; then
+  . "$HOME/.bashrc"
+fi
+
+# Terminal type
+export TERM=xterm-256color
+
+# Setup for interactive commands
+export INTERACTIVE_COMMAND_SUPPORT=1
+
+# Custom tools
+export PATH="$HOME/.local/custom_tools:$PATH"

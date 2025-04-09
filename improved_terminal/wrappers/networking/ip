@@ -1,0 +1,39 @@
+#!/bin/bash
+# Enhanced ip wrapper for terminal environment
+
+# Source shell functions if available
+if [[ -f "$HOME/.local/lib/shell_functions.sh" ]]; then
+  source "$HOME/.local/lib/shell_functions.sh"
+fi
+
+# Check if system ip exists
+if command -v ip >/dev/null 2>&1; then
+  # Pass all arguments to the real ip
+  $(which ip) "$@"
+  exit $?
+fi
+
+# If we don't have ip, create a simple simulation based on available tools
+if [ "$1" = "addr" ] || [ "$1" = "address" ]; then
+  echo "1: lo: <LOOPBACK,UP,LOWER_UP> mtu 65536 qdisc noqueue state UNKNOWN group default qlen 1000"
+  echo "    inet 127.0.0.1/8 scope host lo"
+  echo "    inet6 ::1/128 scope host "
+  echo "2: eth0: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc fq_codel state UP group default qlen 1000"
+  echo "    inet 192.168.1.100/24 brd 192.168.1.255 scope global dynamic eth0"
+  echo ""
+  echo "This is a simulated ip command."
+  echo "In a real Linux environment, you would see actual network interface information."
+elif [ "$1" = "route" ]; then
+  echo "default via 192.168.1.1 dev eth0 proto dhcp src 192.168.1.100 metric 100"
+  echo "192.168.1.0/24 dev eth0 proto kernel scope link src 192.168.1.100 metric 100"
+  echo ""
+  echo "This is a simulated ip route command."
+  echo "In a real Linux environment, you would see actual routing table."
+else
+  echo "Usage: ip [ OPTIONS ] OBJECT { COMMAND | help }"
+  echo ""
+  echo "This is a simulated ip command."
+  echo "Try 'ip addr' or 'ip route' for network information."
+fi
+
+exit 0

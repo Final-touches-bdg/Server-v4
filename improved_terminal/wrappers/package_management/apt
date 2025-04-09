@@ -1,0 +1,395 @@
+#!/bin/bash
+# Enhanced apt wrapper for simulated package management
+
+# Source shell functions if available
+if [[ -f "$HOME/.local/lib/shell_functions.sh" ]]; then
+  source "$HOME/.local/lib/shell_functions.sh"
+fi
+
+# Define colors
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+BLUE='\033[0;34m'
+NC='\033[0m' # No Color
+
+# Package database location
+PKG_DB="$HOME/.pkg/installed.txt"
+PKG_LIST="$HOME/.pkg/package_list.txt"
+PKG_LOG="$HOME/.pkg/history.log"
+
+# Ensure package directories exist
+mkdir -p "$(dirname "$PKG_DB")"
+mkdir -p "$HOME/.pkg/cache"
+
+# Create package list if it doesn't exist
+if [[ ! -f "$PKG_LIST" ]]; then
+  cat > "$PKG_LIST" << 'PKGLIST'
+# Format: package_name|version|description
+bash|5.1.0|GNU Bourne Again SHell
+python3|3.10.0|Python programming language
+python-pip|23.0.1|Package installer for Python
+git|2.40.0|Fast, scalable, distributed revision control system
+curl|8.0.1|Command line tool for transferring data with URL syntax
+wget|1.21.3|Retrieves files from the web
+vim|9.0.0|Vi IMproved - enhanced vi editor
+nano|7.0|Small, friendly text editor
+gcc|12.0.0|GNU C compiler
+g++|12.0.0|GNU C++ compiler
+make|4.4.0|Utility for directing compilation
+nodejs|18.12.0|JavaScript runtime
+npm|9.5.0|Node package manager
+ruby|3.2.0|Ruby programming language
+perl|5.36.0|Practical Extraction and Report Language
+php|8.2.0|PHP: Hypertext Preprocessor
+sqlite3|3.40.0|Command line interface for SQLite
+openssl|3.0.8|Toolkit for Transport Layer Security
+openssh-client|9.2p1|Secure shell client
+zsh|5.9.0|Z shell
+jq|1.6|Command-line JSON processor
+tree|2.0.4|Displays directory tree, in color
+htop|3.2.2|Interactive process viewer
+ncdu|1.17|Disk usage analyzer with ncurses interface
+rsync|3.2.7|Fast, versatile file copying tool
+gzip|1.12|GNU compression utility
+bzip2|1.0.8|High-quality block-sorting file compressor
+unzip|6.0|De-archiver for .zip files
+tar|1.34|GNU version of the tar archiving utility
+netstat|3.10.0|Print network connections, routing tables, etc.
+nmap|7.93|Network exploration tool and security scanner
+PKGLIST
+fi
+
+# Create package database if it doesn't exist
+if [[ ! -f "$PKG_DB" ]]; then
+  # Add some base packages installed by default
+  cat > "$PKG_DB" << 'PKGDB'
+bash
+python3
+python-pip
+curl
+wget
+git
+vim
+nano
+openssh-client
+openssl
+PKGDB
+fi
+
+# Create log file if it doesn't exist
+if [[ ! -f "$PKG_LOG" ]]; then
+  touch "$PKG_LOG"
+fi
+
+# Log package management actions
+log_pkg_action() {
+  local action="$1"
+  local pkgs="$2"
+  local timestamp=$(date +"%Y-%m-%d %H:%M:%S")
+  echo "[$timestamp] $action: $pkgs" >> "$PKG_LOG"
+}
+
+# Function to simulate package installation
+pkg_install() {
+  local packages=($@)
+  local installed=0
+  local skipped=0
+  local unknown=0
+  
+  for pkg in "${packages[@]}"; do
+    # Check if package already installed
+    if grep -q "
+^
+$pkg$" "$PKG_DB"; then
+      echo -e "${YELLOW}Package '$pkg' is already installed${NC}"
+      skipped=$((skipped + 1))
+      continue
+    fi
+    
+    # Check if package exists in package list
+    if grep -q "
+^
+$pkg|" "$PKG_LIST"; then
+      # Get package details
+      local pkg_info=$(grep "
+^
+$pkg|" "$PKG_LIST")
+      local version=$(echo "$pkg_info" | cut -d'|' -f2)
+      local description=$(echo "$pkg_info" | cut -d'|' -f3)
+      
+      echo -e "${GREEN}Installing $pkg (Version: $version)${NC}"
+      echo -e "${BLUE}$description${NC}"
+      echo "$pkg" >> "$PKG_DB"
+      
+      echo -e "  ${GREEN}✓${NC} Package installed successfully"
+      installed=$((installed + 1))
+      
+      # If installing Python packages, simulate pip behavior
+      if [[ "$pkg" == python-* || "$pkg" == "pip" ]]; then
+        echo -e "  ${BLUE}Running post-install Python package setup...${NC}"
+        sleep 1
+      fi
+      
+      # If installing Node.js packages, simulate npm behavior
+      if [[ "$pkg" == "nodejs" || "$pkg" == "npm" || "$pkg" == node-* ]]; then
+        echo -e "  ${BLUE}Running post-install Node.js package setup...${NC}"
+        sleep 1
+      fi
+    else
+      echo -e "${RED}Unknown package: $pkg${NC}"
+      unknown=$((unknown + 1))
+    fi
+  done
+  
+  # Summary
+  echo ""
+  echo -e "${BLUE}Summary:${NC}"
+  echo -e "  ${GREEN}$installed package(s) installed${NC}"
+  if [[ $skipped -gt 0 ]]; then
+    echo -e "  ${YELLOW}$skipped package(s) skipped (already installed)${NC}"
+  fi
+  if [[ $unknown -gt 0 ]]; then
+    echo -e "  ${RED}$unknown package(s) unknown${NC}"
+  fi
+  
+  log_pkg_action "install" "$*"
+}
+
+# Function to simulate package removal
+pkg_remove() {
+  local packages=($@)
+  local removed=0
+  local skipped=0
+  
+  for pkg in "${packages[@]}"; do
+    # Check if package is installed
+    if grep -q "
+^
+$pkg$" "$PKG_DB"; then
+      echo -e "${YELLOW}Removing package: $pkg${NC}"
+      # Remove package from database
+      grep -v "
+^
+$pkg$" "$PKG_DB" > "$PKG_DB.tmp"
+      mv "$PKG_DB.tmp" "$PKG_DB"
+      echo -e "  ${GREEN}✓${NC} Package removed successfully"
+      removed=$((removed + 1))
+    else
+      echo -e "${RED}Package not installed: $pkg${NC}"
+      skipped=$((skipped + 1))
+    fi
+  done
+  
+  # Summary
+  echo ""
+  echo -e "${BLUE}Summary:${NC}"
+  echo -e "  ${GREEN}$removed package(s) removed${NC}"
+  if [[ $skipped -gt 0 ]]; then
+    echo -e "  ${YELLOW}$skipped package(s) skipped (not installed)${NC}"
+  fi
+  
+  log_pkg_action "remove" "$*"
+}
+
+# Function to list installed packages
+pkg_list_installed() {
+  echo -e "${BLUE}Installed packages:${NC}"
+  
+  if [[ ! -s "$PKG_DB" ]]; then
+    echo "No packages installed"
+    return
+  fi
+  
+  while IFS= read -r pkg; do
+    if [[ -z "$pkg" || "$pkg" =~ 
+^
+# ]]; then
+      continue
+    fi
+    
+    # Get package details if available
+    if grep -q "
+^
+$pkg|" "$PKG_LIST"; then
+      local pkg_info=$(grep "
+^
+$pkg|" "$PKG_LIST")
+      local version=$(echo "$pkg_info" | cut -d'|' -f2)
+      local description=$(echo "$pkg_info" | cut -d'|' -f3)
+      echo -e "  ${GREEN}$pkg${NC} - $version - $description"
+    else
+      echo -e "  ${GREEN}$pkg${NC}"
+    fi
+  done < "$PKG_DB"
+}
+
+# Function to search packages
+pkg_search() {
+  local search_term="$1"
+  
+  echo -e "${BLUE}Searching for packages matching '$search_term':${NC}"
+  
+  local found=0
+  while IFS= read -r line; do
+    if [[ -z "$line" || "$line" =~ 
+^
+# ]]; then
+      continue
+    fi
+    
+    local pkg=$(echo "$line" | cut -d'|' -f1)
+    local version=$(echo "$line" | cut -d'|' -f2)
+    local description=$(echo "$line" | cut -d'|' -f3)
+    
+    if [[ "$pkg" == *"$search_term"* || "$description" == *"$search_term"* ]]; then
+      local installed=""
+      if grep -q "
+^
+$pkg$" "$PKG_DB"; then
+        installed="${GREEN}[installed]${NC}"
+      fi
+      
+      echo -e "  ${YELLOW}$pkg${NC} ($version) $installed"
+      echo -e "    $description"
+      found=$((found + 1))
+    fi
+  done < "$PKG_LIST"
+  
+  if [[ $found -eq 0 ]]; then
+    echo -e "${RED}No packages found matching '$search_term'${NC}"
+  else
+    echo -e "\n${GREEN}Found $found package(s) matching '$search_term'${NC}"
+  fi
+}
+
+# Function to update package lists
+pkg_update() {
+  echo -e "${BLUE}Updating package lists...${NC}"
+  
+  # Simulate updating by showing progress
+  echo -ne "  Progress: [                    ] 0%\r"
+  sleep 0.2
+  echo -ne "  Progress: [#####               ] 25%\r"
+  sleep 0.2
+  echo -ne "  Progress: [##########          ] 50%\r"
+  sleep 0.2
+  echo -ne "  Progress: [###############     ] 75%\r"
+  sleep 0.2
+  echo -ne "  Progress: [####################] 100%\r"
+  echo -e "\n"
+  
+  echo -e "${GREEN}Package lists updated${NC}"
+  log_pkg_action "update" "package lists"
+}
+
+# Process apt/apt-get command
+if [[ "$0" == *"apt-get" ]]; then
+  CMD_NAME="apt-get"
+else
+  CMD_NAME="apt"
+fi
+
+# Handle command arguments
+case "$1" in
+  install|--install|-i)
+    shift
+    if [[ $# -eq 0 ]]; then
+      echo -e "${RED}Error: No packages specified${NC}"
+      echo "Usage: $CMD_NAME install PACKAGE..."
+      exit 1
+    fi
+    pkg_install "$@"
+    ;;
+    
+  remove|--remove|-r)
+    shift
+    if [[ $# -eq 0 ]]; then
+      echo -e "${RED}Error: No packages specified${NC}"
+      echo "Usage: $CMD_NAME remove PACKAGE..."
+      exit 1
+    fi
+    pkg_remove "$@"
+    ;;
+    
+  purge)
+    shift
+    echo -e "${YELLOW}Note: Purge is the same as remove in this simulation${NC}"
+    if [[ $# -eq 0 ]]; then
+      echo -e "${RED}Error: No packages specified${NC}"
+      echo "Usage: $CMD_NAME purge PACKAGE..."
+      exit 1
+    fi
+    pkg_remove "$@"
+    ;;
+    
+  search|--search|-s)
+    shift
+    if [[ $# -eq 0 ]]; then
+      echo -e "${RED}Error: No search term specified${NC}"
+      echo "Usage: $CMD_NAME search TERM"
+      exit 1
+    fi
+    pkg_search "$1"
+    ;;
+    
+  list|--list|-l)
+    shift
+    if [[ "$1" == "installed" || "$1" == "--installed" ]]; then
+      pkg_list_installed
+    else
+      echo -e "${RED}Unknown list option: $1${NC}"
+      echo "Usage: $CMD_NAME list installed"
+      exit 1
+    fi
+    ;;
+    
+  update|--update|-u)
+    pkg_update
+    ;;
+    
+  upgrade|--upgrade|-g)
+    echo -e "${BLUE}Simulating package upgrade...${NC}"
+    echo -e "${GREEN}All packages up to date.${NC}"
+    log_pkg_action "upgrade" "all packages"
+    ;;
+    
+  autoremove)
+    echo -e "${BLUE}Simulating autoremove...${NC}"
+    echo -e "${GREEN}No packages to autoremove.${NC}"
+    log_pkg_action "autoremove" ""
+    ;;
+    
+  clean)
+    echo -e "${BLUE}Cleaning package cache...${NC}"
+    rm -rf "$HOME/.pkg/cache/"*
+    echo -e "${GREEN}Package cache cleaned.${NC}"
+    log_pkg_action "clean" "cache"
+    ;;
+    
+  help|--help|-h)
+    echo -e "${BLUE}$CMD_NAME - Terminal Package Management Simulation${NC}"
+    echo ""
+    echo "Usage: $CMD_NAME COMMAND [OPTIONS]"
+    echo ""
+    echo "Commands:"
+    echo "  install PACKAGE...   - Install packages"
+    echo "  remove PACKAGE...    - Remove packages"
+    echo "  purge PACKAGE...     - Remove packages and configuration"
+    echo "  search TERM          - Search for packages"
+    echo "  list installed       - List installed packages"
+    echo "  update               - Update package lists"
+    echo "  upgrade              - Upgrade packages"
+    echo "  autoremove           - Remove automatically installed packages"
+    echo "  clean                - Clean package cache"
+    echo "  help                 - Show this help"
+    ;;
+    
+  *)
+    echo -e "${RED}Unknown command: $1${NC}"
+    echo "Use '$CMD_NAME help' to see available commands"
+    exit 1
+    ;;
+esac
+
+exit 0

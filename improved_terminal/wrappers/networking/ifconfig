@@ -1,0 +1,104 @@
+#!/bin/bash
+# Enhanced ifconfig wrapper for terminal environment
+
+# Source shell functions if available
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+if [[ -f "$HOME/.local/lib/shell_functions.sh" ]]; then
+  source "$HOME/.local/lib/shell_functions.sh"
+fi
+
+# Check if system ifconfig exists
+if command -v ifconfig >/dev/null 2>&1; then
+  # Pass all arguments to the real ifconfig
+  $(which ifconfig) "$@"
+  exit $?
+fi
+
+# If we don't have ifconfig, use 'ip' command as fallback
+if command -v ip >/dev/null 2>&1; then
+  # Simulate ifconfig using ip command
+  if [ $# -eq 0 ]; then
+    # No arguments, list all interfaces
+    ip -c addr show
+    exit $?
+  elif [ "$1" = "-a" ]; then
+    # List all interfaces including inactive ones
+    ip -c addr show
+    exit $?
+  elif [[ "$1" =~ 
+^
+[a-zA-Z0-9]+$ ]]; then
+    # Interface specified
+    ip -c addr show "$1"
+    exit $?
+  fi
+else
+  # Fallback to basic network information gathering using /proc
+  function show_interfaces() {
+    echo "Network interfaces:"
+    
+    # List all network interfaces from /proc
+    for iface in /sys/class/net/*; do
+      if [ -d "$iface" ]; then
+        iface_name=$(basename "$iface")
+        echo -e "\n$iface_name:"
+        
+        # Show MAC address
+        if [ -f "$iface/address" ]; then
+          echo "  HWaddr $(cat $iface/address)"
+        fi
+        
+        # Show interface status
+        if [ -f "$iface/operstate" ]; then
+          state=$(cat $iface/operstate)
+          echo "  Status: $state"
+        fi
+        
+        # Try to get IP address
+        if [ -d "/sys/class/net/$iface_name" ]; then
+          if command -v ip >/dev/null 2>&1; then
+            ip_info=$(ip -4 addr show "$iface_name" 2>/dev/null)
+            if [ $? -eq 0 ]; then
+              ip_addr=$(echo "$ip_info" | grep 'inet ' | awk '{print $2}' | cut -d/ -f1)
+              if [ -n "$ip_addr" ]; then
+                echo "  inet addr: $ip_addr"
+              fi
+            fi
+          fi
+        fi
+      fi
+    done
+  }
+  
+  if [ $# -eq 0 ] || [ "$1" = "-a" ]; then
+    show_interfaces
+  elif [[ "$1" =~ 
+^
+[a-zA-Z0-9]+$ ]]; then
+    for iface in /sys/class/net/*; do
+      if [ "$(basename "$iface")" = "$1" ]; then
+        echo "$1:"
+        # Show interface information
+        if [ -f "$iface/address" ]; then
+          echo "  HWaddr $(cat $iface/address)"
+        fi
+        # Try to get IP address
+        if command -v ip >/dev/null 2>&1; then
+          ip_info=$(ip -4 addr show "$1" 2>/dev/null)
+          if [ $? -eq 0 ]; then
+            ip_addr=$(echo "$ip_info" | grep 'inet ' | awk '{print $2}' | cut -d/ -f1)
+            if [ -n "$ip_addr" ]; then
+              echo "  inet addr: $ip_addr"
+            fi
+          fi
+        fi
+        exit 0
+      fi
+    done
+    echo "Interface $1 not found"
+    exit 1
+  else
+    echo "Usage: ifconfig [interface]"
+    exit 1
+  fi
+fi

@@ -1,0 +1,51 @@
+#!/bin/bash
+# Enhanced netstat wrapper for terminal environment
+
+# Source shell functions if available
+if [[ -f "$HOME/.local/lib/shell_functions.sh" ]]; then
+  source "$HOME/.local/lib/shell_functions.sh"
+fi
+
+# Check if system netstat exists
+if command -v netstat >/dev/null 2>&1; then
+  # Pass all arguments to the real netstat
+  $(which netstat) "$@"
+  exit $?
+fi
+
+# If no netstat, check for ss (Socket Statistics)
+if command -v ss >/dev/null 2>&1; then
+  # Map common netstat args to ss
+  if [[ "$*" == *"-tuln"* ]]; then
+    echo "Using ss instead of netstat:"
+    ss -tuln
+    exit $?
+  elif [[ "$*" == *"-an"* ]]; then
+    echo "Using ss instead of netstat:"
+    ss -an
+    exit $?
+  else
+    echo "Using ss instead of netstat:"
+    ss "$@"
+    exit $?
+  fi
+fi
+
+# If no netstat or ss, try to use lsof for basic port listening
+if command -v lsof >/dev/null 2>&1 && [[ "$*" == *"-tuln"* || "$*" == *"-tan"* ]]; then
+  echo "Using lsof instead of netstat to show listening ports:"
+  lsof -i -P -n | grep LISTEN
+  exit $?
+fi
+
+# If we don't have netstat, ss, or lsof, create a simple simulation
+echo "Active Internet connections (only servers)"
+echo "Proto Recv-Q Send-Q Local Address           Foreign Address         State"
+echo "tcp        0      0 0.0.0.0:22              0.0.0.0:*               LISTEN"
+echo "tcp        0      0 127.0.0.1:631           0.0.0.0:*               LISTEN"
+echo "tcp        0      0 127.0.0.1:3000          0.0.0.0:*               LISTEN"
+echo "tcp6       0      0 :::22                   :::*                    LISTEN"
+echo ""
+echo "This is a simulated netstat command."
+echo "In a real Linux environment, you would see actual network connections."
+exit 0

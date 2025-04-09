@@ -1,0 +1,243 @@
+#!/bin/bash
+# Script to set up all command wrappers
+
+# Source shell functions if available
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+if [[ -f "$SCRIPT_DIR/../lib/shell_functions.sh" ]]; then
+  source "$SCRIPT_DIR/../lib/shell_functions.sh"
+else
+  # Define colors if shell_functions.sh is not available
+  RED='\033[0;31m'
+  GREEN='\033[0;32m'
+  YELLOW='\033[1;33m'
+  BLUE='\033[0;34m'
+  NC='\033[0m' # No Color
+fi
+
+echo -e "${BLUE}Setting up command wrappers...${NC}"
+
+# Create necessary directories
+mkdir -p "$HOME/.local/bin"
+mkdir -p "$HOME/.enhanced/bin"
+
+# Find our wrapper directory
+PARENT_DIR="$(dirname "$SCRIPT_DIR")"
+WRAPPERS_DIR="$PARENT_DIR/wrappers"
+
+if [[ ! -d "$WRAPPERS_DIR" ]]; then
+  echo -e "${RED}Error: Wrappers directory not found!${NC}"
+  echo "Expected location: $WRAPPERS_DIR"
+  exit 1
+fi
+
+# Setup category counters
+network_count=0
+editor_count=0
+pkg_count=0
+system_count=0
+total_count=0
+
+# Process networking wrappers
+if [[ -d "$WRAPPERS_DIR/networking" ]]; then
+  echo -e "${YELLOW}Setting up networking commands...${NC}"
+  for wrapper in "$WRAPPERS_DIR/networking"/*; do
+    if [[ -f "$wrapper" && -x "$wrapper" ]]; then
+      cmd_name=$(basename "$wrapper")
+      target="$HOME/.local/bin/$cmd_name"
+      if [[ -L "$target" ]]; then
+        # Remove old symlink
+        rm -f "$target"
+      fi
+      ln -sf "$wrapper" "$target"
+      echo -e "  ${GREEN}Installed:${NC} $cmd_name"
+      network_count=$((network_count + 1))
+      total_count=$((total_count + 1))
+    fi
+  done
+fi
+
+# Process editor wrappers
+if [[ -d "$WRAPPERS_DIR/editors" ]]; then
+  echo -e "${YELLOW}Setting up text editors...${NC}"
+  for wrapper in "$WRAPPERS_DIR/editors"/*; do
+    if [[ -f "$wrapper" && -x "$wrapper" || -L "$wrapper" ]]; then
+      cmd_name=$(basename "$wrapper")
+      target="$HOME/.local/bin/$cmd_name"
+      if [[ -L "$target" ]]; then
+        # Remove old symlink
+        rm -f "$target"
+      fi
+      ln -sf "$wrapper" "$target"
+      echo -e "  ${GREEN}Installed:${NC} $cmd_name"
+      editor_count=$((editor_count + 1))
+      total_count=$((total_count + 1))
+    fi
+  done
+fi
+
+# Process package management wrappers
+if [[ -d "$WRAPPERS_DIR/package_management" ]]; then
+  echo -e "${YELLOW}Setting up package management...${NC}"
+  for wrapper in "$WRAPPERS_DIR/package_management"/*; do
+    if [[ -f "$wrapper" && -x "$wrapper" || -L "$wrapper" ]]; then
+      cmd_name=$(basename "$wrapper")
+      target="$HOME/.local/bin/$cmd_name"
+      if [[ -L "$target" ]]; then
+        # Remove old symlink
+        rm -f "$target"
+      fi
+      ln -sf "$wrapper" "$target"
+      echo -e "  ${GREEN}Installed:${NC} $cmd_name"
+      pkg_count=$((pkg_count + 1))
+      total_count=$((total_count + 1))
+    fi
+  done
+fi
+
+# Process system utility wrappers if they exist
+if [[ -d "$WRAPPERS_DIR/system" ]]; then
+  echo -e "${YELLOW}Setting up system utilities...${NC}"
+  for wrapper in "$WRAPPERS_DIR/system"/*; do
+    if [[ -f "$wrapper" && -x "$wrapper" || -L "$wrapper" ]]; then
+      cmd_name=$(basename "$wrapper")
+      target="$HOME/.local/bin/$cmd_name"
+      if [[ -L "$target" ]]; then
+        # Remove old symlink
+        rm -f "$target"
+      fi
+      ln -sf "$wrapper" "$target"
+      echo -e "  ${GREEN}Installed:${NC} $cmd_name"
+      system_count=$((system_count + 1))
+      total_count=$((total_count + 1))
+    fi
+  done
+fi
+
+# Create a command finder utility
+echo -e "${YELLOW}Creating command utility scripts...${NC}"
+cat > "$HOME/.local/bin/which-wrapper" << 'WHICH'
+#!/bin/bash
+# Enhanced which command that shows wrapper locations too
+
+if [ $# -eq 0 ]; then
+  echo "Usage: which-wrapper COMMAND"
+  exit 1
+fi
+
+CMD="$1"
+
+# Check local bin directory
+if [ -f "$HOME/.local/bin/$CMD" ]; then
+  echo -e "\033[0;32m$HOME/.local/bin/$CMD\033[0m"
+  if [ -L "$HOME/.local/bin/$CMD" ]; then
+    echo -e "\033[0;36m└─> $(readlink -f "$HOME/.local/bin/$CMD")\033[0m"
+  fi
+  exit 0
+fi
+
+# Check enhanced bin directory
+if [ -f "$HOME/.enhanced/bin/$CMD" ]; then
+  echo -e "\033[0;32m$HOME/.enhanced/bin/$CMD\033[0m"
+  if [ -L "$HOME/.enhanced/bin/$CMD" ]; then
+    echo -e "\033[0;36m└─> $(readlink -f "$HOME/.enhanced/bin/$CMD")\033[0m"
+  fi
+  exit 0
+fi
+
+# Check home bin directory
+if [ -f "$HOME/bin/$CMD" ]; then
+  echo -e "\033[0;32m$HOME/bin/$CMD\033[0m"
+  if [ -L "$HOME/bin/$CMD" ]; then
+    echo -e "\033[0;36m└─> $(readlink -f "$HOME/bin/$CMD")\033[0m"
+  fi
+  exit 0
+fi
+
+# Check system path
+if command -v "$CMD" &>/dev/null; then
+  system_path=$(command -v "$CMD")
+  echo -e "\033[0;33m$system_path\033[0m (system)"
+  exit 0
+fi
+
+echo -e "\033[0;31m$CMD not found\033[0m"
+exit 1
+WHICH
+chmod +x "$HOME/.local/bin/which-wrapper"
+echo -e "  ${GREEN}Created:${NC} which-wrapper utility"
+
+# Create a command availability checker
+cat > "$HOME/.local/bin/available-commands" << 'AVAIL'
+#!/bin/bash
+# Lists all available commands in this terminal environment
+
+# Define colors
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+BLUE='\033[0;34m'
+CYAN='\033[0;36m'
+NC='\033[0m' # No Color
+
+echo -e "${BLUE}Available commands in this terminal environment:${NC}"
+echo
+
+# Check local bin directory
+if [ -d "$HOME/.local/bin" ]; then
+  echo -e "${YELLOW}User commands:${NC}"
+  find "$HOME/.local/bin" -type f -executable -o -type l | sort | while read cmd; do
+    cmd_name=$(basename "$cmd")
+    if [ -L "$cmd" ]; then
+      echo -e "  ${GREEN}$cmd_name${NC} ${CYAN}→$(readlink -f "$cmd" | xargs basename)${NC}"
+    else
+      echo -e "  ${GREEN}$cmd_name${NC}"
+    fi
+  done
+  echo
+fi
+
+# Check enhanced bin directory
+if [ -d "$HOME/.enhanced/bin" ]; then
+  echo -e "${YELLOW}Enhanced commands:${NC}"
+  find "$HOME/.enhanced/bin" -type f -executable -o -type l | sort | while read cmd; do
+    cmd_name=$(basename "$cmd")
+    echo -e "  ${GREEN}$cmd_name${NC}"
+  done
+  echo
+fi
+
+# Check home bin directory
+if [ -d "$HOME/bin" ]; then
+  echo -e "${YELLOW}Local bin commands:${NC}"
+  find "$HOME/bin" -type f -executable -o -type l | sort | while read cmd; do
+    cmd_name=$(basename "$cmd")
+    echo -e "  ${GREEN}$cmd_name${NC}"
+  done
+  echo
+fi
+
+# Get common commands from system PATH
+echo -e "${YELLOW}System commands:${NC}"
+common_commands="bash cat cd chmod chown cp curl echo find git grep gzip head less ln ls mkdir mv nano python python3 rm rmdir sed sort tail tar touch unzip vi vim wget xargs"
+for cmd in $common_commands; do
+  if command -v "$cmd" &>/dev/null; then
+    echo -e "  ${GREEN}$cmd${NC}"
+  fi
+done
+echo
+
+echo -e "${BLUE}Use 'which-wrapper COMMAND' to see the location of a specific command.${NC}"
+AVAIL
+chmod +x "$HOME/.local/bin/available-commands"
+echo -e "  ${GREEN}Created:${NC} available-commands utility"
+
+# Summary
+echo -e "\n${BLUE}Command wrappers installation summary:${NC}"
+echo -e "  ${GREEN}$network_count${NC} networking commands"
+echo -e "  ${GREEN}$editor_count${NC} text editors"
+echo -e "  ${GREEN}$pkg_count${NC} package management tools"
+if [[ $system_count -gt 0 ]]; then
+  echo -e "  ${GREEN}$system_count${NC} system utilities"
+fi
+echo -e "  ${GREEN}$((total_count + 2))${NC} commands installed in total (including utility scripts)"
+echo -e "\n${GREEN}Command wrappers setup complete!${NC}"
+echo -e "${YELLOW}Type 'available-commands' to see all available commands.${NC}"

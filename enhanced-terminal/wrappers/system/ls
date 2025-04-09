@@ -1,0 +1,15 @@
+#!/bin/bash
+# Enhanced ls command with color support
+
+# Use system ls if available with color
+if /bin/ls --color=auto &>/dev/null 2>&1; then
+  if [[ "$*" != *"--color"* ]]; then
+    /bin/ls --color=auto "$@"
+  else
+    /bin/ls "$@"
+  fi
+  exit $?
+fi
+
+# Otherwise use basic ls
+/bin/ls "$@"

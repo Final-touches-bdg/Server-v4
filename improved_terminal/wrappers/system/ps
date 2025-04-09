@@ -1,0 +1,87 @@
+#!/bin/bash
+# Simulated ps command for process viewing
+
+# Source shell functions if available
+if [[ -f "$HOME/.local/lib/shell_functions.sh" ]]; then
+  source "$HOME/.local/lib/shell_functions.sh"
+fi
+
+# Define colors
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+BLUE='\033[0;34m'
+NC='\033[0m' # No Color
+
+# Check for real ps command
+if command -v /bin/ps &>/dev/null; then
+  /bin/ps "$@"
+  exit $?
+elif command -v /usr/bin/ps &>/dev/null; then
+  /usr/bin/ps "$@"
+  exit $?
+fi
+
+# Parse arguments
+show_all=false
+show_full=false
+show_forest=false
+show_headers=true
+
+for arg in "$@"; do
+  case "$arg" in
+    a|--all)
+      show_all=true
+      ;;
+    u|--user)
+      show_user=true
+      ;;
+    x)
+      show_x=true
+      ;;
+    f)
+      show_forest=true
+      ;;
+    h|--no-headers)
+      show_headers=false
+      ;;
+    --help)
+      cat << 'HELP'
+Usage: ps [options]
+
+Basic options:
+  a                       all with tty, except session leaders
+  u                       user-oriented format
+  x                       processes without controlling ttys
+  f                       forest display (show process hierarchy)
+  h, --no-headers         do not print headers
+  -e, -A                  all processes
+
+Examples:
+  ps                      show processes for the current user
+  ps -aux                 show all processes in user format
+  ps -ef                  show all processes in full format
+  ps --forest             show processes in a hierarchy
+HELP
+      exit 0
+      ;;
+  esac
+done
+
+# Simulate basic process list
+if $show_headers; then
+  printf "%-6s %-10s %-4s %-4s %-8s %-8s %-8s %s\n" "PID" "USER" "%CPU" "%MEM" "VSZ" "RSS" "TTY" "COMMAND"
+fi
+
+# Simulate a process list with realistic values
+cat << 'SIMPROC' | while read pid user cpu mem vsz rss tty cmd; do
+1      root      0.0  0.3  169892 12892 ?        /sbin/init
+2      root      0.0  0.0       0     0 ?        [kthreadd]
+382    root      0.2  2.1  267788 168724 ?       python3 flask_server.py
+409    user      0.0  0.1  123456  2740 pts/0    bash
+412    user      0.3  0.1  166234  3288 pts/0    ps aux
+SIMPROC
+  printf "%-6s %-10s %-4s %-4s %-8s %-8s %-8s %s\n" "$pid" "$user" "$cpu" "$mem" "$vsz" "$rss" "$tty" "$cmd"
+done
+
+exit 0

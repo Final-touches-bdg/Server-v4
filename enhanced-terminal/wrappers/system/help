@@ -1,0 +1,79 @@
+#!/bin/bash
+# Enhanced help system
+
+# Define colors
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+BLUE='\033[0;34m'
+NC='\033[0m' # No Color
+
+echo -e "${BLUE}Enhanced Terminal Help System${NC}"
+echo 
+
+if [ $# -eq 0 ]; then
+  echo -e "${YELLOW}Available Commands:${NC}"
+  echo
+  echo -e "${GREEN}File Operations:${NC}"
+  echo "  ls        List directory contents with color"
+  echo "  cd        Change directory"
+  echo "  mkdir     Create directories"
+  echo "  touch     Create empty files or update timestamps"
+  echo "  cp        Copy files and directories"
+  echo "  mv        Move (rename) files and directories"
+  echo "  rm        Remove files and directories"
+  echo
+  echo -e "${GREEN}Text Processing:${NC}"
+  echo "  cat       Display file contents"
+  echo "  grep      Search for patterns in files"
+  echo "  head      Display first lines of files"
+  echo "  tail      Display last lines of files"
+  echo
+  echo -e "${GREEN}System Information:${NC}"
+  echo "  ps        Display process status"
+  echo "  top       Display and manage processes"
+  echo "  df        Display disk space usage"
+  echo "  free      Display memory usage"
+  echo
+  echo -e "${GREEN}Network:${NC}"
+  echo "  ping      Send ICMP ECHO_REQUEST to network hosts"
+  echo "  ifconfig  Configure network interfaces"
+  echo "  wget      Non-interactive network downloader"
+  echo "  curl      Transfer data from or to a server"
+  echo
+  echo -e "Use '${YELLOW}help command${NC}' for more information about a specific command."
+else
+  command="$1"
+  echo -e "${YELLOW}Help for: $command${NC}"
+  echo
+  
+  case "$command" in
+    ls)
+      echo "ls - list directory contents"
+      echo
+      echo "Usage: ls [OPTION]... [FILE]..."
+      echo
+      echo "Common options:"
+      echo "  -l    use a long listing format"
+      echo "  -a    do not ignore entries starting with ."
+      echo "  -h    with -l, print sizes in human readable format"
+      echo
+      echo "Examples:"
+      echo "  ls       List files in current directory"
+      echo "  ls -la   List all files in long format"
+      echo "  ls -lh   List files with human-readable sizes"
+      ;;
+    *)
+      # Try using the command's --help option
+      if command -v "$command" &>/dev/null; then
+        echo "Showing help for $command:"
+        echo
+        $command --help 2>&1 | head -n 20
+        echo
+        echo "For more details, try: $command --help"
+      else
+        echo "No detailed help available for '$command'."
+        echo "Try 'help' without arguments to see available commands."
+      fi
+      ;;
+  esac
+fi

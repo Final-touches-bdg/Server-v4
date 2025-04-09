@@ -1,0 +1,106 @@
+#!/bin/bash
+# Simulated top command for process viewing
+
+# Source shell functions if available
+if [[ -f "$HOME/.local/lib/shell_functions.sh" ]]; then
+  source "$HOME/.local/lib/shell_functions.sh"
+fi
+
+# Define colors
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+BLUE='\033[0;34m'
+CYAN='\033[0;36m'
+NC='\033[0m' # No Color
+
+# Check for real top command
+if command -v /usr/bin/top &>/dev/null; then
+  /usr/bin/top "$@"
+  exit $?
+fi
+
+# Simulate top command
+clear
+
+# Header
+echo -e "${BLUE}top - $(date +"%H:%M:%S") up 1 day,  3:25,  1 user,  load average: 0.08, 0.17, 0.15${NC}"
+echo -e "${BLUE}Tasks: 132 total,   1 running, 131 sleeping,   0 stopped,   0 zombie${NC}"
+echo -e "${BLUE}%Cpu(s):  3.5 us,  1.2 sy,  0.0 ni, 95.0 id,  0.3 wa,  0.0 hi,  0.0 si,  0.0 st${NC}"
+echo -e "${BLUE}MiB Mem :   7863.0 total,   4985.3 free,   1325.5 used,   1552.2 buff/cache${NC}"
+echo -e "${BLUE}MiB Swap:   2048.0 total,   2048.0 free,      0.0 used.   6273.0 avail Mem${NC}"
+echo
+
+# Column headers
+printf "${CYAN}%5s %-8s %2s %6s %6s %8s %8s %-10s %s${NC}\n" "PID" "USER" "PR" "NI" "VIRT" "RES" "SHR" "S" "COMMAND"
+
+# Simulate process list (use ps aux if available, otherwise simulate)
+if command -v ps &>/dev/null; then
+  ps aux | head -n 15 | tail -n +2 | while read -r line; do
+    user=$(echo "$line" | awk '{print $1}')
+    pid=$(echo "$line" | awk '{print $2}')
+    cpu=$(echo "$line" | awk '{print $3}')
+    mem=$(echo "$line" | awk '{print $4}')
+    vsz=$(echo "$line" | awk '{print $5}')
+    rss=$(echo "$line" | awk '{print $6}')
+    tty=$(echo "$line" | awk '{print $7}')
+    stat=$(echo "$line" | awk '{print $8}')
+    start=$(echo "$line" | awk '{print $9}')
+    time=$(echo "$line" | awk '{print $10}')
+    command=$(echo "$line" | awk '{for(i=11;i<=NF;i++) printf "%s ", $i}')
+    
+    # Format the output to look like top
+    printf "%5s %-8s %2s %6s %6s %8s %8s %-10s %s\n" "$pid" "$user" "20" "0" "$vsz" "$rss" "1024" "$stat" "$command"
+  done
+else
+  # Simulate some processes with random attributes
+  cat << 'SIMPROC'
+  1 root      20   0   169m   12m  8628 S  0.0  0.3   0:02.35 /sbin/init
+  2 root      20   0     0     0     0 S  0.0  0.0   0:00.00 [kthreadd]
+ 14 root      20   0     0     0     0 S  0.0  0.0   0:00.00 [ksoftirqd/0]
+ 15 root      20   0     0     0     0 S  0.0  0.0   0:00.12 [kworker/0:1]
+ 17 root      20   0     0     0     0 S  0.0  0.0   0:00.00 [kdevtmpfs]
+ 18 root       0 -20     0     0     0 S  0.0  0.0   0:00.00 [netns]
+ 21 root      20   0     0     0     0 S  0.0  0.0   0:00.00 [kworker/0:2]
+ 22 root       0 -20     0     0     0 S  0.0  0.0   0:00.00 [crypto]
+109 root      20   0     0     0     0 S  0.0  0.0   0:00.00 [kswapd0]
+277 root      20   0     0     0     0 S  0.0  0.0   0:00.00 [kworker/u8:2]
+330 root      20   0     0     0     0 S  0.0  0.0   0:00.07 [jbd2/sda1-8]
+333 root       0 -20     0     0     0 S  0.0  0.0   0:00.00 [ext4-rsv-conver]
+382 root      20   0   261m  164m  164m S  0.0  2.1   0:02.28 python3 flask_server.py
+409 user      20   0   123m  2740  2024 S  0.0  0.1   0:00.07 bash
+412 user      20   0   166m  3288  2740 R  0.3  0.1   0:00.02 top
+SIMPROC
+fi
+
+# Show instructions at the bottom (like real top)
+echo
+echo -e "${YELLOW}Press q to quit, h for help${NC}"
+
+# Wait for 'q' to quit, simulating the real top behavior
+while true; do
+  read -rsn1 -t 1 key
+  if [[ "$key" == "q" ]]; then
+    clear
+    exit 0
+  elif [[ "$key" == "h" ]]; then
+    clear
+    echo -e "${BLUE}Help for Interactive Commands - simulated top${NC}"
+    echo
+    echo -e "${YELLOW}Global Commands:${NC}"
+    echo "  h or ?      : Help"
+    echo "  q           : Quit"
+    echo "  k           : Kill a process (not implemented in simulation)"
+    echo "  r           : Renice a process (not implemented in simulation)"
+    echo "  c           : Toggle command/program name (not implemented)"
+    echo "  m           : Toggle memory display (not implemented)"
+    echo "  1           : Toggle single/multiple CPU display (not implemented)"
+    echo
+    echo -e "${YELLOW}Press any key to continue...${NC}"
+    read -rsn1
+    break
+  fi
+done
+
+# Call the script again to refresh the display (like real top)
+$0

@@ -1,0 +1,29 @@
+#!/bin/bash
+# Enhanced traceroute wrapper for terminal environment
+
+# Source shell functions if available
+if [[ -f "$HOME/.local/lib/shell_functions.sh" ]]; then
+  source "$HOME/.local/lib/shell_functions.sh"
+fi
+
+# Check if system traceroute exists
+if command -v traceroute >/dev/null 2>&1; then
+  # Pass all arguments to the real traceroute
+  $(which traceroute) "$@"
+  exit $?
+fi
+
+# If no traceroute, check for tracepath
+if command -v tracepath >/dev/null 2>&1; then
+  # Use tracepath instead
+  echo "Using tracepath instead of traceroute:"
+  $(which tracepath) "$@"
+  exit $?
+fi
+
+# If we don't have traceroute or tracepath, create a simple simulation
+echo "traceroute to $1, 30 hops max"
+echo "This is a simulated traceroute command."
+echo "In a real Linux environment, you would see the network path to the destination."
+echo "Try using curl or wget to test actual network connectivity."
+exit 0

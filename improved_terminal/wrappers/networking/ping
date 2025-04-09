@@ -1,0 +1,21 @@
+#!/bin/bash
+# Enhanced ping wrapper for terminal environment
+
+# Source shell functions if available
+if [[ -f "$HOME/.local/lib/shell_functions.sh" ]]; then
+  source "$HOME/.local/lib/shell_functions.sh"
+fi
+
+# Check if system ping exists
+if command -v ping >/dev/null 2>&1; then
+  # Pass all arguments to the real ping
+  $(which ping) "$@"
+  exit $?
+fi
+
+# If we don't have ping, create a simple simulation
+echo "PING $1 (simulation mode)"
+echo "This is a simulated ping command."
+echo "In a real Linux environment, you would see actual network connectivity."
+echo "Try using curl or wget to test actual network connectivity."
+exit 0

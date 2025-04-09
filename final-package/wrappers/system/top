@@ -1,0 +1,58 @@
+#!/bin/bash
+# Simple 'top' command simulation
+
+# Define colors
+GREEN='\033[0;32m'
+BLUE='\033[0;34m'
+NC='\033[0m' # No Color
+
+# Check if real top exists
+if command -v /usr/bin/top &>/dev/null; then
+  /usr/bin/top "$@"
+  exit $?
+fi
+
+# Otherwise, simulate top with basic information
+clear
+echo -e "${BLUE}top - $(date +"%H:%M:%S") up 1 day, 2 users, load average: 0.01, 0.05, 0.10${NC}"
+echo -e "${BLUE}Tasks: 120 total,   1 running, 119 sleeping,   0 stopped,   0 zombie${NC}"
+echo -e "${BLUE}%Cpu(s):  2.3 us,  1.2 sy,  0.0 ni, 96.4 id,  0.1 wa,  0.0 hi,  0.0 si,  0.0 st${NC}"
+echo -e "${BLUE}MiB Mem :   8192.0 total,   6554.1 free,    712.3 used,    925.6 buff/cache${NC}"
+echo -e "${BLUE}MiB Swap:   2048.0 total,   2048.0 free,      0.0 used.   7264.5 avail Mem${NC}"
+echo
+
+# Print header
+printf "${GREEN}%5s %-8s %4s %4s %8s %8s %-9s %s${NC}\n" "PID" "USER" "%CPU" "MEM" "VIRT" "RES" "STATE" "COMMAND"
+
+# Simulate some processes
+cat << 'PROC'
+    1 root      0.0  0.1  168956  12956 S      /sbin/init
+    2 root      0.0  0.0       0      0 S      [kthreadd]
+   12 root      0.0  0.0       0      0 S      [migration/0]
+  523 root      0.2  0.2  562996  41120 S      /usr/sbin/sshd
+  901 user      0.3  0.4  829580  67892 S      python3 flask_server.py
+ 1024 user      0.0  0.0  123456   6342 S      bash
+ 1025 user      0.3  0.1  135791   9876 R      top
+PROC
+
+# Show instructions at the bottom
+echo
+echo "Press q to quit, h for help"
+
+# Wait for a key press to simulate interactivity
+read -n1 -t 3 key
+if [ "$key" = "q" ]; then
+  clear
+  exit 0
+elif [ "$key" = "h" ]; then
+  clear
+  echo "Help for top"
+  echo
+  echo "  q - quit"
+  echo "  h - help"
+  echo
+  echo "This is a simulated version of top with limited functionality."
+  exit 0
+fi
+
+exit 0

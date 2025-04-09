@@ -1,0 +1,56 @@
+#!/bin/bash
+# Simple nano editor wrapper
+
+# Check if real nano exists
+if command -v /bin/nano &>/dev/null || command -v /usr/bin/nano &>/dev/null; then
+  # Create a nanorc file if it doesn't exist
+  if [ ! -f "$HOME/.nanorc" ]; then
+    cat > "$HOME/.nanorc" << 'NANORC'
+# Enhanced nanorc configuration
+set linenumbers
+set constantshow
+set tabsize 4
+set tabstospaces
+set mouse
+set historylog
+NANORC
+  fi
+  
+  # Run the real nano
+  $(which nano) "$@"
+  exit $?
+fi
+
+# If no real nano is available, provide a basic editor
+echo "Simple Text Editor (nano simulation)"
+echo "===================================="
+
+if [ $# -eq 0 ]; then
+  echo "Error: No file specified."
+  echo "Usage: nano filename"
+  exit 1
+fi
+
+filename="$1"
+
+# Check if file exists
+if [ -f "$filename" ]; then
+  content=$(cat "$filename")
+  echo "Editing file: $filename"
+  echo "Current content:"
+  echo "----------------"
+  echo "$content"
+else
+  echo "Creating new file: $filename"
+  content=""
+fi
+
+echo "----------------"
+echo "Enter new content (Ctrl+D when finished):"
+new_content=$(cat)
+
+# Save the file
+echo "$new_content" > "$filename"
+echo "File saved: $filename"
+
+exit 0

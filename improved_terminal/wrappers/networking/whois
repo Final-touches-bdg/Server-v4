@@ -1,0 +1,31 @@
+#!/bin/bash
+# Enhanced whois wrapper for terminal environment
+
+# Source shell functions if available
+if [[ -f "$HOME/.local/lib/shell_functions.sh" ]]; then
+  source "$HOME/.local/lib/shell_functions.sh"
+fi
+
+# Check if system whois exists
+if command -v whois >/dev/null 2>&1; then
+  # Pass all arguments to the real whois
+  $(which whois) "$@"
+  exit $?
+fi
+
+# If we don't have whois, create a simple simulation
+echo "Simulated WHOIS information for $1"
+echo "----------------------------------"
+echo "Domain Name: $1"
+echo "Registry Domain ID: Simulated-ID"
+echo "Registrar WHOIS Server: whois.example.com"
+echo "Registrar URL: http://www.example.com"
+echo "Updated Date: $(date +"%Y-%m-%d")"
+echo "Creation Date: 2000-01-01"
+echo "Registrar: Example Registrar, Inc."
+echo "Registrar Abuse Contact Email: abuse@example.com"
+echo "Registrar Abuse Contact Phone: +1.5555555555"
+echo ""
+echo "This is a simulated whois command."
+echo "In a real Linux environment, you would see actual domain registration information."
+exit 0
