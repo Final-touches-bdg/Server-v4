@@ -486,21 +486,27 @@ fi
             except Exception as e:
                 print(f"Warning: Failed to extract pkg command: {str(e)}")
         
-        # Setup links for OpenSSL wrapper if available
-        openssl_wrapper_src = os.path.join(scripts_dir, 'openssl-wrapper')
-        openssl_wrapper_dest = os.path.join(user_bin_dir, 'openssl-wrapper')
+        # Setup OpenSSL wrapper with absolute paths for reliability
+        openssl_wrapper_src = os.path.join(os.getcwd(), scripts_dir, 'openssl-wrapper')
+        openssl_wrapper_dest = os.path.join(home_dir, '.local', 'bin', 'openssl-wrapper')
         
-        if os.path.exists(openssl_wrapper_src):
+        if os.path.isfile(openssl_wrapper_src):
             try:
-                # Copy OpenSSL wrapper or create a symlink
-                if os.path.exists(openssl_wrapper_dest):
-                    # Check if content is different before overwriting
-                    if os.path.getsize(openssl_wrapper_src) != os.path.getsize(openssl_wrapper_dest):
-                        shutil.copy2(openssl_wrapper_src, openssl_wrapper_dest)
-                else:
-                    shutil.copy2(openssl_wrapper_src, openssl_wrapper_dest)
+                # Ensure the source script has execute permissions
+                try:
+                    os.chmod(openssl_wrapper_src, 0o755)
+                except Exception as e:
+                    print(f"Warning: Could not set execute permission on OpenSSL wrapper source: {str(e)}")
+                
+                # Copy OpenSSL wrapper file directly
+                with open(openssl_wrapper_src, 'rb') as src_file:
+                    wrapper_content = src_file.read()
+                
+                with open(openssl_wrapper_dest, 'wb') as dest_file:
+                    dest_file.write(wrapper_content)
                 
                 os.chmod(openssl_wrapper_dest, 0o755)
+                print(f"OpenSSL wrapper created at {openssl_wrapper_dest}")
                 
                 # Create an alias in bashrc (check first if it already exists)
                 openssl_alias = '\n# Use enhanced OpenSSL wrapper\nalias openssl="openssl-wrapper"\n'
@@ -540,6 +546,51 @@ done
             os.chmod(keep_alive_path, 0o755)
         except Exception as e:
             print(f"Warning: Failed to create keep-alive script: {str(e)}")
+            
+        # Create a wrapper script to help with OpenSSL path issues
+        openssl_helper_path = os.path.join(user_bin_dir, 'openssl-helper')
+        try:
+            with open(openssl_helper_path, 'w') as f:
+                f.write(f"""#!/bin/bash
+# OpenSSL helper script to handle path issues
+
+# Get absolute path to the wrapper
+WRAPPER_PATH="{os.path.abspath(os.path.join(home_dir, '.local', 'bin', 'openssl-wrapper'))}"
+
+# Check if wrapper exists
+if [ -f "$WRAPPER_PATH" ] && [ -x "$WRAPPER_PATH" ]; then
+    # Execute wrapper with all arguments
+    exec "$WRAPPER_PATH" "$@"
+else
+    # Fallback to system OpenSSL
+    echo "OpenSSL wrapper not found or not executable, using system OpenSSL"
+    exec openssl "$@"
+fi
+""")
+            os.chmod(openssl_helper_path, 0o755)
+            
+            # Create a stronger alias for openssl in bashrc
+            openssl_alias = '\n# Use enhanced OpenSSL wrapper\nalias openssl="$HOME/.local/bin/openssl-helper"\n'
+            if os.path.exists(bashrc_path):
+                with open(bashrc_path, 'r') as f:
+                    bashrc_content = f.read()
+                
+                if "alias openssl=" in bashrc_content:
+                    # Replace existing alias with the better one
+                    with open(bashrc_path, 'w') as f:
+                        bashrc_content = bashrc_content.replace(
+                            'alias openssl="openssl-wrapper"', 
+                            f'alias openssl="$HOME/.local/bin/openssl-helper"'
+                        )
+                        f.write(bashrc_content)
+                else:
+                    # Add the alias
+                    with open(bashrc_path, 'a') as f:
+                        f.write(openssl_alias)
+            
+            print(f"Created OpenSSL helper script at {openssl_helper_path}")
+        except Exception as e:
+            print(f"Warning: Failed to create OpenSSL helper script: {str(e)}")
         
         # Create a memory-monitoring script to help prevent OOM conditions
         memory_monitor_path = os.path.join(user_bin_dir, 'monitor-memory')
@@ -1043,15 +1094,37 @@ def execute_command():
                 'output': 'Session keep-alive script not found. Your session may time out after inactivity.'
             })
     
-    # Special handling for OpenSSL commands - use our wrapper if available
+    # Special handling for OpenSSL commands - use our helper script for robustness
     if command.strip().startswith('openssl '):
-        openssl_wrapper = os.path.join(session['home_dir'], '.local', 'bin', 'openssl-wrapper')
-        if os.path.exists(openssl_wrapper):
+        # Use our newer helper script that handles path issues more robustly
+        openssl_helper = os.path.abspath(os.path.join(session['home_dir'], '.local', 'bin', 'openssl-helper'))
+        if os.path.isfile(openssl_helper):
             # Extract the openssl subcommand and arguments
             openssl_parts = command.strip().split(' ')
             if len(openssl_parts) > 1:
                 openssl_cmd = ' '.join(openssl_parts[1:])
-                command = f"{openssl_wrapper} {openssl_cmd}"
+                # Use helper script with arguments
+                try:
+                    os.chmod(openssl_helper, 0o755)  # Ensure it's executable
+                    command = f"\"{openssl_helper}\" {openssl_cmd}"  # Quote the path to handle spaces
+                    print(f"Using OpenSSL helper: {command}")
+                except Exception as e:
+                    print(f"Warning: Failed to prepare OpenSSL helper: {str(e)}")
+        else:
+            # Try the direct wrapper as fallback
+            openssl_wrapper = os.path.abspath(os.path.join(session['home_dir'], '.local', 'bin', 'openssl-wrapper'))
+            if os.path.isfile(openssl_wrapper):
+                try:
+                    openssl_parts = command.strip().split(' ')
+                    if len(openssl_parts) > 1:
+                        openssl_cmd = ' '.join(openssl_parts[1:])
+                        os.chmod(openssl_wrapper, 0o755)
+                        command = f"\"{openssl_wrapper}\" {openssl_cmd}"
+                        print(f"Using OpenSSL wrapper (fallback): {command}")
+                except Exception as e:
+                    print(f"Warning: Failed to prepare OpenSSL wrapper fallback: {str(e)}")
+            else:
+                print(f"OpenSSL helper not found at {openssl_helper}, using system OpenSSL")
     
     # Prevent potentially dangerous or resource-intensive commands
     disallowed_commands = [
